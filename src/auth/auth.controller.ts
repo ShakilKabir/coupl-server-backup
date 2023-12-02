@@ -14,8 +14,10 @@ export class AuthController {
 
   @Post('signup')
   async signUp(@Body() signUpDto: SignUpDto): Promise<SignUpResponseDto> {
-    return this.authService.signUp(signUpDto);
+      const inviterId = signUpDto.inviterId; // Extract inviterId from the DTO
+      return this.authService.signUp(signUpDto, inviterId);
   }
+  
 
   @Post('signin')
   async signIn(@Body() signInDto: SignInDto): Promise<SignUpResponseDto> {

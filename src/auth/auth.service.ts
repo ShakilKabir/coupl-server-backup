@@ -51,7 +51,6 @@ export class AuthService {
     const { password, ...userDetails } = signUpDto;
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const newUser = new this.userModel({
       ...userDetails,
       password: hashedPassword,
@@ -64,11 +63,11 @@ export class AuthService {
       }
       newUser.partnerId = inviter._id;
       inviter.partnerId = newUser._id;
-      await inviter.save();
+      await inviter.save(); // Save the inviter with updated partnerId
     }
 
     try {
-      await newUser.save();
+      await newUser.save(); // Save the new user
       const payload = { sub: newUser._id };
       return {
         access_token: this.jwtService.sign(payload),

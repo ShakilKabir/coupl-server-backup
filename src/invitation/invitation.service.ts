@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as nodemailer from 'nodemailer';
 import { VerifyInvitationDto } from './dto/verify-invitation.dto';
 
+
 @Injectable()
 export class InvitationService {
   private mailerTransport;
@@ -25,11 +26,10 @@ export class InvitationService {
   }
 
   async sendPartnerInvitation(
-    token: string,
+    userId: string,
     partnerEmail: string,
   ): Promise<{ message: string }> {
-    const inviterId = this.extractUserIdFromToken(token);
-    const invitationToken = this.generateInvitationToken(inviterId);
+    const invitationToken = this.generateInvitationToken(userId);
     const invitationLink = `https://your-app-url.com/signup?invitationToken=${invitationToken}`;
 
     const mailOptions = {
@@ -42,7 +42,7 @@ export class InvitationService {
     this.invitationStore[partnerEmail] = {
       token: invitationToken,
       status: 'pending',
-      inviterId: inviterId,
+      inviterId: userId,
     };
 
     await this.mailerTransport.sendMail(mailOptions);
@@ -59,16 +59,16 @@ export class InvitationService {
     throw new UnauthorizedException('Invalid invitation token');
   }
 
-  private extractUserIdFromToken(token: string): string {
-    try {
-      const decoded = this.jwtService.verify(token, {
-        secret: process.env.JWT_SECRET,
-      });
-      return decoded.userId;
-    } catch (error) {
-      throw new UnauthorizedException('Invalid token');
-    }
-  }
+  // private extractUserIdFromToken(token: string): string {
+  //   try {
+  //     const decoded = this.jwtService.verify(token, {
+  //       secret: process.env.JWT_SECRET,
+  //     });
+  //     return decoded.userId;
+  //   } catch (error) {
+  //     throw new UnauthorizedException('Invalid token');
+  //   }
+  // }
 
   private generateInvitationToken(userId: string): string {
     const payload = { userId };
@@ -79,12 +79,16 @@ export class InvitationService {
   }
 
   async verifyInvitation(verifyInvitationDto: VerifyInvitationDto): Promise<{ inviterId: string }> {
-    const { invitationToken } = verifyInvitationDto;
-    try {
-      const { inviterId } = this.checkInvitationToken(invitationToken);
-      return { inviterId };
-    } catch (error) {
-      throw new NotFoundException('Invitation token not found');
+    const { invitationToken, partnerEmail } = verifyInvitationDto;
+    console.log(this.invitationStore)
+
+    const invitation = this.invitationStore[partnerEmail];
+    if (!invitation || invitation.token !== invitationToken) {
+      console.log('invitation token from param', invitationToken)
+      console.log('invitation token from store', invitation.token)
+      throw new NotFoundException('Invalid invitation token or email');
     }
+
+    return { inviterId: invitation.inviterId };
   }
 }

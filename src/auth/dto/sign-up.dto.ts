@@ -60,4 +60,6 @@ export class SignUpDto {
     @IsNotEmpty()
     @IsObject()
     readonly physical_address: AddressDto;
+
+    readonly inviterId?: string;
 }
