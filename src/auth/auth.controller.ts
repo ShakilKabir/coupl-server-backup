@@ -29,8 +29,9 @@ export class AuthController {
     return this.authService.checkEmailAvailability(email);
   }
 
+  //using mail
   @Post('send-otp')
-  async sendOTP(@Body('email') email: string) {
+  async sendOTP(@Body('email_address') email: string) {
     return this.authService.sendOTP(email);
   }
 
@@ -38,4 +39,22 @@ export class AuthController {
   async verifyOTP(@Body() verifyOtpDto: VerifyOtpDto) {
     return this.authService.verifyOTP(verifyOtpDto);
   }
+
+
+  //using twilio
+  // @Post('send-otp')
+  // async sendOtp(@Body() data: { phone: string }): Promise<{ msg: string }> {
+  //   let prefix = '+1';
+  //   let phone = prefix.concat(data.phone);
+  //   return await this.authService.sendOTP(phone);
+  // }
+
+  // @Post('verify-otp')
+  // async verifyOtp(
+  //   @Body() data: { phone: string; otp: string },
+  // ): Promise<{ msg: string }> {
+  //   let prefix = '+1';
+  //   let phone = prefix.concat(data.phone);
+  //   return await this.authService.verifyOTP(phone, data.otp);
+  // }
 }

@@ -11,7 +11,6 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const status = exception.getStatus();
     const exceptionResponse = exception.getResponse();
     
-    // Custom error formatting
     response
       .status(status)
       .json({

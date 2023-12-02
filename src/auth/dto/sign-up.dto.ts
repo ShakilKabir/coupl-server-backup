@@ -11,7 +11,7 @@ class AddressDto {
 
     @IsNotEmpty()
     @IsString()
-    street_line_2: string;
+    street_line_2?: string;
 
     @IsNotEmpty()
     @IsString()

@@ -5,7 +5,7 @@ import { IsNotEmpty, IsString } from 'class-validator';
 export class VerifyOtpDto {
   @IsNotEmpty()
   @IsString()
-  readonly email: string;
+  readonly email_address: string;
 
   @IsNotEmpty()
   @IsString()
