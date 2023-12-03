@@ -9,7 +9,7 @@ class Address {
   @Prop({ required: true })
   street_line_1: string;
 
-  @Prop({ required: true })
+  @Prop()
   street_line_2: string;
 
   @Prop({ required: true })
@@ -31,9 +31,6 @@ export class User {
     last_name: string;
 
     @Prop({ required: true, unique: true })
-    username: string;
-
-    @Prop({ required: true, unique: true })
     email_address: string;
 
     @Prop({ required: true })
@@ -50,6 +47,9 @@ export class User {
 
     @Prop({ type: Address, _id: false, required: true })
     physical_address: Address;
+
+    @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+    partnerId: Types.ObjectId | null;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

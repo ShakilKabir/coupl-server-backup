@@ -1,13 +1,13 @@
-// dto/verify-otp.dto.ts
+// pair-up.dto.ts
 
 import { IsNotEmpty, IsString } from 'class-validator';
 
-export class VerifyOtpDto {
+export class PairUpDto {
   @IsNotEmpty()
   @IsString()
-  readonly email_address: string;
+  readonly primaryId: string;
 
   @IsNotEmpty()
   @IsString()
-  readonly otp: string;
+  readonly secondaryId: string;
 }

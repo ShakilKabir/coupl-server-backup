@@ -1,16 +1,34 @@
-import { Controller, Post, Body } from '@nestjs/common';
+//invitation.controller.ts
+
+import { Controller, Post, Body, UseGuards, Request } from '@nestjs/common';
 import { InvitationService } from './invitation.service';
 import { InvitePartnerDto } from './dto/invite-partner.dto';
+import { VerifyInvitationDto } from './dto/verify-invitation.dto';
+import { AuthGuard } from '@nestjs/passport';
+import { PairUpDto } from './dto/pair-up.dto';
+
 
 @Controller('invitation')
 export class InvitationController {
   constructor(private invitationService: InvitationService) {}
 
+  @UseGuards(AuthGuard('jwt'))
   @Post('invite-partner')
-  invitePartner(@Body() body: InvitePartnerDto): Promise<{ message: string }> {
+  invitePartner(@Request() req, @Body() body: InvitePartnerDto): Promise<{ message: string }> {
+    const userId = req.user.userId;
     return this.invitationService.sendPartnerInvitation(
-      body.token,
+      userId,
       body.partnerEmail,
     );
+  }
+
+  @Post('verify-invitation')
+  async verifyInvitation(@Body() verifyInvitationDto: VerifyInvitationDto) {
+    return this.invitationService.verifyInvitation(verifyInvitationDto);
+  }
+
+  @Post('pair-up')
+  async pairUp(@Body() pairUpDto: PairUpDto) {
+    return this.invitationService.pairUp(pairUpDto);
   }
 }
