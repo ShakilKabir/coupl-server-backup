@@ -3,6 +3,7 @@ import {
   Injectable,
   ConflictException,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -14,11 +15,13 @@ import { SignUpResponseDto } from './dto/sign-up-response.dto';
 import { SignInDto } from './dto/sign-in.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import * as nodemailer from 'nodemailer';
+import { Twilio } from 'twilio';
 
 @Injectable()
 export class AuthService {
   private mailerTransport;
   private otpStore: Record<string, string> = {};
+  // private twilioClient: Twilio;
 
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
@@ -33,18 +36,23 @@ export class AuthService {
       secure: true,
       port: 465,
     });
+
+    //using twilio
+    // this.twilioClient = new Twilio(
+    //   process.env.TWILIO_ACCOUNT_SID,
+    //   process.env.TWILIO_AUTH_TOKEN,
+    // );
   }
 
   async signUp(signUpDto: SignUpDto): Promise<SignUpResponseDto> {
     const { password, ...userDetails } = signUpDto;
-
+  
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const newUser = new this.userModel({
       ...userDetails,
       password: hashedPassword,
     });
-
+  
     try {
       await newUser.save();
       const payload = { sub: newUser._id };
@@ -58,12 +66,13 @@ export class AuthService {
       );
     }
   }
+  
 
   async signIn(signInDto: SignInDto): Promise<SignUpResponseDto> {
-    const { email, password } = signInDto;
+    const { email_address, password } = signInDto;
 
     const user = await this.userModel.findOne({
-      $or: [{ email_address: email }],
+      $or: [{ email_address: email_address }],
     });
 
     if (!user) {
@@ -77,7 +86,7 @@ export class AuthService {
 
     console.log('JWT Secret:', process.env.JWT_SECRET);
 
-    const payload = { username: user.username, sub: user._id };
+    const payload = { sub: user._id };
     return {
       access_token: this.jwtService.sign(payload),
       expires_in: 86400,
@@ -109,7 +118,7 @@ export class AuthService {
   }
 
   async verifyOTP(verifyOtpDto: VerifyOtpDto): Promise<{ verified: boolean }> {
-    const { email, otp } = verifyOtpDto;
+    const { email_address: email, otp } = verifyOtpDto;
     const validOtp = this.otpStore[email];
 
     if (otp === validOtp) {
@@ -119,4 +128,26 @@ export class AuthService {
       return { verified: false };
     }
   }
+
+  //using twilio
+
+  // async sendOTP(phoneNumber: string) {
+  //   const serviceSid = process.env.TWILIO_VERIFICATION_SERVICE_SID;
+  //   let msg = '';
+  //   await this.twilioClient.verify.v2
+  //   .services(serviceSid)
+  //   .verifications.create({ to: phoneNumber, channel: 'sms' })
+  //   .then((verification) => (msg = verification.status));
+  //   return { msg: msg };
+  // }
+
+  // async verifyOTP(phoneNumber: string, code: string) {
+  //   const serviceSid = process.env.TWILIO_VERIFICATION_SERVICE_SID;
+  //   let msg = '';
+  //   await this.twilioClient.verify.v2
+  //     .services(serviceSid)
+  //     .verificationChecks.create({ to: phoneNumber, code: code })
+  //     .then((verification) => (msg = verification.status));
+  //   return { msg: msg };
+  // }
 }
