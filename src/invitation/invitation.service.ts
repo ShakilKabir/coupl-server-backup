@@ -1,8 +1,12 @@
 // invitation.service.ts
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as nodemailer from 'nodemailer';
 import { VerifyInvitationDto } from './dto/verify-invitation.dto';
+import { PairUpDto } from './dto/pair-up.dto';
+import { User, UserDocument } from 'src/auth/schema/user.schema';
+import { Model } from 'mongoose';
+import { InjectModel } from '@nestjs/mongoose';
 
 
 @Injectable()
@@ -13,7 +17,7 @@ export class InvitationService {
     { token: string; status: string; inviterId: string }
   > = {};
 
-  constructor(private jwtService: JwtService) {
+  constructor(private jwtService: JwtService,@InjectModel(User.name) private userModel: Model<UserDocument>,) {
     this.mailerTransport = nodemailer.createTransport({
       service: 'Gmail',
       auth: {
@@ -56,19 +60,8 @@ export class InvitationService {
         return { inviterId: this.invitationStore[email].inviterId };``
       }
     }
-    throw new UnauthorizedException('Invalid invitation token');
+    throw new NotFoundException('Invalid invitation token');
   }
-
-  // private extractUserIdFromToken(token: string): string {
-  //   try {
-  //     const decoded = this.jwtService.verify(token, {
-  //       secret: process.env.JWT_SECRET,
-  //     });
-  //     return decoded.userId;
-  //   } catch (error) {
-  //     throw new UnauthorizedException('Invalid token');
-  //   }
-  // }
 
   private generateInvitationToken(userId: string): string {
     const payload = { userId };
@@ -91,4 +84,25 @@ export class InvitationService {
 
     return { inviterId: invitation.inviterId };
   }
+
+  async pairUp(pairUpDto: PairUpDto): Promise<{ message: string }> {
+    const { primaryId, secondaryId } = pairUpDto;
+  
+    try {
+      const primaryExists = await this.userModel.exists({ _id: primaryId });
+      const secondaryExists = await this.userModel.exists({ _id: secondaryId });
+  
+      if (!primaryExists || !secondaryExists) {
+        throw new NotFoundException('One or both users not found');
+      }
+  
+      await this.userModel.findByIdAndUpdate(primaryId, { partnerId: secondaryId });
+      await this.userModel.findByIdAndUpdate(secondaryId, { partnerId: primaryId });
+  
+      return { message: 'Users successfully paired' };
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to pair users', error.message);
+    }
+  }
+  
 }

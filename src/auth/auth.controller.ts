@@ -14,8 +14,7 @@ export class AuthController {
 
   @Post('signup')
   async signUp(@Body() signUpDto: SignUpDto): Promise<SignUpResponseDto> {
-      const inviterId = signUpDto.inviterId; // Extract inviterId from the DTO
-      return this.authService.signUp(signUpDto, inviterId);
+      return this.authService.signUp(signUpDto);
   }
   
 

@@ -1,13 +1,13 @@
-//sign-in.dto.ts
+// pair-up.dto.ts
 
 import { IsNotEmpty, IsString } from 'class-validator';
 
-export class SignInDto {
+export class PairUpDto {
   @IsNotEmpty()
   @IsString()
-  readonly email_address: string;
+  readonly primaryId: string;
 
   @IsNotEmpty()
   @IsString()
-  readonly password: string;
+  readonly secondaryId: string;
 }

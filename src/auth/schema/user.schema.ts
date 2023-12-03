@@ -48,8 +48,8 @@ export class User {
     @Prop({ type: Address, _id: false, required: true })
     physical_address: Address;
 
-    @Prop({ type: Types.ObjectId, ref: 'User' })
-    partnerId: Types.ObjectId;
+    @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+    partnerId: Types.ObjectId | null;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

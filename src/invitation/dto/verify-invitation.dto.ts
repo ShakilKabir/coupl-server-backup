@@ -1,3 +1,5 @@
+//verify-invitation.dto.ts
+
 import { IsNotEmpty, IsEmail, IsString } from 'class-validator';
 
 export class VerifyInvitationDto {

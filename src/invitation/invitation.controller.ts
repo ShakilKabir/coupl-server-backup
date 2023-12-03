@@ -5,6 +5,7 @@ import { InvitationService } from './invitation.service';
 import { InvitePartnerDto } from './dto/invite-partner.dto';
 import { VerifyInvitationDto } from './dto/verify-invitation.dto';
 import { AuthGuard } from '@nestjs/passport';
+import { PairUpDto } from './dto/pair-up.dto';
 
 
 @Controller('invitation')
@@ -24,5 +25,10 @@ export class InvitationController {
   @Post('verify-invitation')
   async verifyInvitation(@Body() verifyInvitationDto: VerifyInvitationDto) {
     return this.invitationService.verifyInvitation(verifyInvitationDto);
+  }
+
+  @Post('pair-up')
+  async pairUp(@Body() pairUpDto: PairUpDto) {
+    return this.invitationService.pairUp(pairUpDto);
   }
 }

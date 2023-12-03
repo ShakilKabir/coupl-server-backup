@@ -44,42 +44,29 @@ export class AuthService {
     // );
   }
 
-  async signUp(
-    signUpDto: SignUpDto,
-    inviterId?: string,
-  ): Promise<SignUpResponseDto> {
+  async signUp(signUpDto: SignUpDto): Promise<SignUpResponseDto> {
     const { password, ...userDetails } = signUpDto;
-
+  
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = new this.userModel({
       ...userDetails,
       password: hashedPassword,
     });
-
-    if (inviterId) {
-      const inviter = await this.userModel.findById(inviterId);
-      if (!inviter) {
-        throw new NotFoundException('Inviter not found');
-      }
-      newUser.partnerId = inviter._id;
-      inviter.partnerId = newUser._id;
-      await inviter.save(); // Save the inviter with updated partnerId
-    }
-
+  
     try {
-      await newUser.save(); // Save the new user
+      await newUser.save();
       const payload = { sub: newUser._id };
       return {
         access_token: this.jwtService.sign(payload),
         expires_in: 86400,
       };
     } catch (error) {
-      console.log(error);
       throw new InternalServerErrorException(
         'There was an error processing your request',
       );
     }
   }
+  
 
   async signIn(signInDto: SignInDto): Promise<SignUpResponseDto> {
     const { email_address, password } = signInDto;
