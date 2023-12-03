@@ -6,8 +6,4 @@ export class PairUpDto {
   @IsNotEmpty()
   @IsString()
   readonly primaryId: string;
-
-  @IsNotEmpty()
-  @IsString()
-  readonly secondaryId: string;
 }

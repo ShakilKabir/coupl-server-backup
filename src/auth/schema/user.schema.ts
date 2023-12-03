@@ -50,6 +50,9 @@ export class User {
 
     @Prop({ type: Types.ObjectId, ref: 'User', default: null })
     partnerId: Types.ObjectId | null;
+
+    @Prop({ default: true })
+    isPrimary: boolean;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

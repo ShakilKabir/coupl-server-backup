@@ -85,9 +85,7 @@ export class InvitationService {
     return { inviterId: invitation.inviterId };
   }
 
-  async pairUp(pairUpDto: PairUpDto): Promise<{ message: string }> {
-    const { primaryId, secondaryId } = pairUpDto;
-  
+  async pairUp(primaryId: string, secondaryId: string): Promise<{ message: string }> {
     try {
       const primaryExists = await this.userModel.exists({ _id: primaryId });
       const secondaryExists = await this.userModel.exists({ _id: secondaryId });
@@ -97,12 +95,11 @@ export class InvitationService {
       }
   
       await this.userModel.findByIdAndUpdate(primaryId, { partnerId: secondaryId });
-      await this.userModel.findByIdAndUpdate(secondaryId, { partnerId: primaryId });
+      await this.userModel.findByIdAndUpdate(secondaryId, { partnerId: primaryId, isPrimary: false });
   
       return { message: 'Users successfully paired' };
     } catch (error) {
       throw new InternalServerErrorException('Failed to pair users', error.message);
     }
   }
-  
 }
