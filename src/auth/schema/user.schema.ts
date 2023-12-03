@@ -43,7 +43,7 @@ export class User {
     citizenship: string;
 
     @Prop({ required: true })
-    password: string;
+    pin: string;
 
     @Prop({ type: Address, _id: false, required: true })
     physical_address: Address;

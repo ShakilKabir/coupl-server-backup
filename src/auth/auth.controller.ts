@@ -6,7 +6,6 @@ import { SignUpDto } from './dto/sign-up.dto';
 import { SignUpResponseDto } from './dto/sign-up-response.dto';
 import { SignInDto } from './dto/sign-in.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
-import { InvitePartnerDto } from '../invitation/dto/invite-partner.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -14,9 +13,9 @@ export class AuthController {
 
   @Post('signup')
   async signUp(@Body() signUpDto: SignUpDto): Promise<SignUpResponseDto> {
+    console.log('signUpDto', signUpDto)
       return this.authService.signUp(signUpDto);
   }
-  
 
   @Post('signin')
   async signIn(@Body() signInDto: SignInDto): Promise<SignUpResponseDto> {

@@ -1,6 +1,6 @@
 //sign-in.dto.ts
 
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsString, Matches } from 'class-validator';
 
 export class SignInDto {
   @IsNotEmpty()
@@ -8,6 +8,6 @@ export class SignInDto {
   readonly email_address: string;
 
   @IsNotEmpty()
-  @IsString()
-  readonly password: string;
+  @Matches(/^\d{6}$/, { message: 'PIN must be 6 digits' })
+  readonly pin: string;
 }

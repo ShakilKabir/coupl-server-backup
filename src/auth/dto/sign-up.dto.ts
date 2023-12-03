@@ -64,8 +64,8 @@ export class SignUpDto {
   readonly citizenship: string;
 
   @IsNotEmpty()
-  @IsString()
-  readonly password: string;
+  @Matches(/^\d{6}$/, { message: 'PIN must be 6 digits' })
+  readonly pin: string;
 
   @IsNotEmpty()
   @IsObject()
