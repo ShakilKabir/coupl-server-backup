@@ -27,6 +27,7 @@ class AddressDto {
 
   @IsNotEmpty()
   @IsString()
+  @Length(3)
   state: string;
 
   @IsNotEmpty()

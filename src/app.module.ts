@@ -8,6 +8,7 @@ import { ConfigModule } from '@nestjs/config';
 import { DatabaseService } from './services/database.service';
 import { AuthModule } from './auth/auth.module';
 import { InvitationModule } from './invitation/invitation.module';
+import { BankAccountModule } from './bank-account/bank-account.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { InvitationModule } from './invitation/invitation.module';
     MongooseModule.forRoot(process.env.DB_URI),
     AuthModule,
     InvitationModule,
+    BankAccountModule,
   ],
   controllers: [AppController],
   providers: [AppService, DatabaseService],

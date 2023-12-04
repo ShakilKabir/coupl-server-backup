@@ -1,3 +1,4 @@
+import { BankAccountService } from './../bank-account/bank-account.service';
 // invitation.service.ts
 import { Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -17,7 +18,7 @@ export class InvitationService {
     { token: string; status: string; inviterId: string }
   > = {};
 
-  constructor(private jwtService: JwtService,@InjectModel(User.name) private userModel: Model<UserDocument>,) {
+  constructor(private jwtService: JwtService,@InjectModel(User.name) private userModel: Model<UserDocument>,private bankAccountService: BankAccountService) {
     this.mailerTransport = nodemailer.createTransport({
       service: 'Gmail',
       auth: {
@@ -86,20 +87,66 @@ export class InvitationService {
   }
 
   async pairUp(primaryId: string, secondaryId: string): Promise<{ message: string }> {
+    const session = await this.userModel.db.startSession();
+    session.startTransaction();
+
     try {
-      const primaryExists = await this.userModel.exists({ _id: primaryId });
-      const secondaryExists = await this.userModel.exists({ _id: secondaryId });
-  
-      if (!primaryExists || !secondaryExists) {
-        throw new NotFoundException('One or both users not found');
-      }
-  
-      await this.userModel.findByIdAndUpdate(primaryId, { partnerId: secondaryId });
-      await this.userModel.findByIdAndUpdate(secondaryId, { partnerId: primaryId, isPrimary: false });
-  
-      return { message: 'Users successfully paired' };
+      let [primaryUser, secondaryUser] = await this.retrieveUsers(primaryId, secondaryId, session);
+      const [primaryPersonApplication, secondaryPersonApplication] = await this.createPersonApplications(primaryUser, secondaryUser);
+      await this.updateUserRecords(primaryUser, secondaryUser, primaryPersonApplication, secondaryPersonApplication, session);
+      [primaryUser, secondaryUser] = await this.retrieveUsers(primaryId, secondaryId, session);
+      await this.openBankAccount(primaryUser, secondaryUser);
+
+      await session.commitTransaction();
+      return { message: 'Users successfully paired and bank account opened' };
     } catch (error) {
+      await session.abortTransaction();
       throw new InternalServerErrorException('Failed to pair users', error.message);
+    } finally {
+      session.endSession();
+    }
+  }
+
+  private async retrieveUsers(primaryId: string, secondaryId: string, session): Promise<[UserDocument, UserDocument]> {
+    let primaryUser = await this.userModel.findById(primaryId).session(session);
+    let secondaryUser = await this.userModel.findById(secondaryId).session(session);
+
+    if (!primaryUser || !secondaryUser) {
+      throw new NotFoundException('One or both users not found');
+    }
+
+    return [primaryUser, secondaryUser];
+  }
+
+  private async createPersonApplications(primaryUser: UserDocument, secondaryUser: UserDocument): Promise<[any, any]> {
+    try {
+      const primaryPersonApplication = await this.bankAccountService.createPersonApplication(primaryUser);
+      const secondaryPersonApplication = await this.bankAccountService.createPersonApplication(secondaryUser);
+
+      return [primaryPersonApplication, secondaryPersonApplication];
+    } catch (error) {
+      throw new InternalServerErrorException('Error creating person applications', error.message);
+    }
+  }
+
+  private async updateUserRecords(primaryUser: UserDocument, secondaryUser: UserDocument, primaryPersonApplication: any, secondaryPersonApplication: any, session): Promise<void> {
+    await this.userModel.findByIdAndUpdate(primaryUser._id, {
+      partnerId: secondaryUser._id,
+      person_application_id: primaryPersonApplication.id
+    }, { session });
+
+    await this.userModel.findByIdAndUpdate(secondaryUser._id, {
+      partnerId: primaryUser._id,
+      isPrimary: false,
+      person_application_id: secondaryPersonApplication.id
+    }, { session });
+  }
+
+  private async openBankAccount(primaryUser: UserDocument, secondaryUser: UserDocument): Promise<void> {
+    try {
+      await this.bankAccountService.openBankAccount(primaryUser, secondaryUser);
+    } catch (error) {
+      throw new InternalServerErrorException('Error opening bank account', error.message);
     }
   }
 }

@@ -53,6 +53,9 @@ export class User {
 
     @Prop({ default: true })
     isPrimary: boolean;
+
+    @Prop({ default: null })
+    person_application_id: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
