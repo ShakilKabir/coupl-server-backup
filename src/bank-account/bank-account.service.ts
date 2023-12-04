@@ -47,7 +47,9 @@ export class BankAccountService {
           config,
         )
         .toPromise();
-      return response.data;
+      console.log('response.data.id:', response.data.id);
+      console.log('response.data:', response.data);
+      return response.data.id;
     } catch (error) {
       console.error('Error in openBankAccount:', error);
       throw error;
@@ -95,5 +97,50 @@ export class BankAccountService {
       phone_number: user.phone_number,
       physical_address: user.physical_address,
     };
+  }
+  async checkAndStoreAccountNumber(accountApplicationId: any): Promise<{ account_number: string, account_id: string }> {
+    try {
+      await this.delay(6000);
+
+      const auth = {
+        username: process.env.TREASURY_PRIME_API_KEY_ID,
+        password: process.env.TREASURY_PRIME_API_SECRET_KEY,
+      };
+
+      const config = {
+        auth: auth,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      };
+      console.log('Account Application ID:', accountApplicationId);
+
+      const response = await this.httpService
+        .get(
+          `${process.env.TREASURY_PRIME_API}/apply/account_application/${accountApplicationId}`,
+          config,
+        )
+        .toPromise();
+
+      const accountData = response.data;
+      if (accountData && accountData.account_number) {
+        console.log('Account number available:', accountData.account_number);
+        console.log('Account data:', accountData);
+        return {
+          account_number: accountData.account_number,
+          account_id: accountApplicationId, // or another relevant identifier
+        };
+      } else {
+        console.log('Account data:', accountData);
+        console.log('Account number not available yet');
+      }
+    } catch (error) {
+      console.error('Error in checkAndStoreAccountNumber:', error);
+      throw error;
+    }
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 }

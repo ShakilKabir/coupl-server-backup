@@ -56,6 +56,12 @@ export class User {
 
     @Prop({ default: null })
     person_application_id: string;
+    
+    @Prop({ default: null })
+    bank_account_number: string;
+
+    @Prop({ default: null })
+    bank_account_id: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
