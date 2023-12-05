@@ -9,6 +9,7 @@ import { DatabaseService } from './services/database.service';
 import { AuthModule } from './auth/auth.module';
 import { InvitationModule } from './invitation/invitation.module';
 import { BankAccountModule } from './bank-account/bank-account.module';
+import { MerchantModule } from './merchant/merchant.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { BankAccountModule } from './bank-account/bank-account.module';
     AuthModule,
     InvitationModule,
     BankAccountModule,
+    MerchantModule,
   ],
   controllers: [AppController],
   providers: [AppService, DatabaseService],

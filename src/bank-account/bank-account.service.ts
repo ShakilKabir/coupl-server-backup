@@ -2,29 +2,47 @@
 
 import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model, Types } from 'mongoose';
 import { UserDocument } from 'src/auth/schema/user.schema';
+import { BankAccount, BankAccountDocument } from './schema/bank-account.schema';
 
 @Injectable()
 export class BankAccountService {
-  constructor(private httpService: HttpService) {}
+  constructor(
+    @InjectModel(BankAccount.name)
+    private bankAccountModel: Model<BankAccountDocument>,
+    private httpService: HttpService,
+  ) {}
 
   async openBankAccount(
     primaryUser: UserDocument,
     secondaryUser: UserDocument,
   ): Promise<any> {
     try {
+      const primaryBankAccount = await this.bankAccountModel.findOne({
+        userId: primaryUser._id,
+      });
+      const secondaryBankAccount = await this.bankAccountModel.findOne({
+        userId: secondaryUser._id,
+      });
+
+      if (!primaryBankAccount || !secondaryBankAccount) {
+        throw new Error('Bank account details not found for one or both users');
+      }
+
       const accountData = {
         person_applications: [
           {
-            id: primaryUser.person_application_id,
+            id: primaryBankAccount.person_application_id,
             roles: ['owner', 'signer'],
           },
           {
-            id: secondaryUser.person_application_id,
+            id: secondaryBankAccount.person_application_id,
             roles: ['owner', 'signer'],
           },
         ],
-        primary_person_application_id: primaryUser.person_application_id,
+        primary_person_application_id: primaryBankAccount.person_application_id,
         account_product_id: 'apt_11jp5twnqtdbt9', // This should be the correct product ID for your application
       };
 
@@ -47,8 +65,7 @@ export class BankAccountService {
           config,
         )
         .toPromise();
-      console.log('response.data.id:', response.data.id);
-      console.log('response.data:', response.data);
+
       return response.data.id;
     } catch (error) {
       console.error('Error in openBankAccount:', error);
@@ -80,6 +97,10 @@ export class BankAccountService {
         )
         .toPromise();
 
+      await this.createOrUpdateBankAccount(user._id, {
+        person_application_id: response.data.id,
+      });
+
       return response.data;
     } catch (error) {
       console.error('Error in creatingPersonApplication:', error);
@@ -98,9 +119,11 @@ export class BankAccountService {
       physical_address: user.physical_address,
     };
   }
-  async checkAndStoreAccountNumber(accountApplicationId: any): Promise<{ account_number: string, account_id: string }> {
+  async checkAndStoreAccountNumber(
+    accountApplicationId: any,
+  ): Promise<{ account_number: string; account_id: string }> {
     try {
-      await this.delay(6000);
+      await this.delay(10000);
 
       const auth = {
         username: process.env.TREASURY_PRIME_API_KEY_ID,
@@ -113,7 +136,6 @@ export class BankAccountService {
           'Content-Type': 'application/json',
         },
       };
-      console.log('Account Application ID:', accountApplicationId);
 
       const response = await this.httpService
         .get(
@@ -124,14 +146,11 @@ export class BankAccountService {
 
       const accountData = response.data;
       if (accountData && accountData.account_number) {
-        console.log('Account number available:', accountData.account_number);
-        console.log('Account data:', accountData);
         return {
           account_number: accountData.account_number,
           account_id: accountApplicationId, // or another relevant identifier
         };
       } else {
-        console.log('Account data:', accountData);
         console.log('Account number not available yet');
       }
     } catch (error) {
@@ -141,6 +160,28 @@ export class BankAccountService {
   }
 
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  async processAccountUpdate(webhookData: any): Promise<void> {
+    // Add your logic here to handle the account update
+    // For example, updating a database, notifying users, etc.
+    // Example:
+    // if (webhookData.account && webhookData.account.updated) {
+    //   // Perform actions based on the updated account data
+    // }
+  }
+
+  async createOrUpdateBankAccount(
+    userId: Types.ObjectId,
+    accountDetails: any,
+  ): Promise<BankAccountDocument> {
+    let account = await this.bankAccountModel.findOne({ userId });
+    if (!account) {
+      account = new this.bankAccountModel({ userId, ...accountDetails });
+    } else {
+      account.set(accountDetails);
+    }
+    return account.save();
   }
 }

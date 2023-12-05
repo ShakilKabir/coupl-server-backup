@@ -1,18 +1,16 @@
-import { BankAccountService } from './../bank-account/bank-account.service';
 // invitation.service.ts
 import {
   Injectable,
   InternalServerErrorException,
   NotFoundException,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as nodemailer from 'nodemailer';
 import { VerifyInvitationDto } from './dto/verify-invitation.dto';
-import { PairUpDto } from './dto/pair-up.dto';
 import { User, UserDocument } from 'src/auth/schema/user.schema';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
+import { BankAccountService } from './../bank-account/bank-account.service';
 
 @Injectable()
 export class InvitationService {
@@ -85,12 +83,9 @@ export class InvitationService {
     verifyInvitationDto: VerifyInvitationDto,
   ): Promise<{ inviterId: string }> {
     const { invitationToken, partnerEmail } = verifyInvitationDto;
-    console.log(this.invitationStore);
 
     const invitation = this.invitationStore[partnerEmail];
     if (!invitation || invitation.token !== invitationToken) {
-      console.log('invitation token from param', invitationToken);
-      console.log('invitation token from store', invitation.token);
       throw new NotFoundException('Invalid invitation token or email');
     }
 
@@ -112,35 +107,33 @@ export class InvitationService {
       );
       const [primaryPersonApplication, secondaryPersonApplication] =
         await this.createPersonApplications(primaryUser, secondaryUser);
-      await this.updateUserRecords(
-        primaryUser,
-        secondaryUser,
-        primaryPersonApplication,
-        secondaryPersonApplication,
-        session,
-      );
+
+      await this.updateUserRecords(primaryUser, secondaryUser, session);
       [primaryUser, secondaryUser] = await this.retrieveUsers(
         primaryId,
         secondaryId,
         session,
       );
+
       const account = await this.openBankAccount(primaryUser, secondaryUser);
-
-      console.log('account in the invitation service:', account);
-
       const accountApplicationResponse =
         await this.bankAccountService.checkAndStoreAccountNumber(account);
 
-      await this.updateUserBankDetails(
-        primaryUser._id,
-        accountApplicationResponse,
-        session,
-      );
-      await this.updateUserBankDetails(
+      await this.bankAccountService.createOrUpdateBankAccount(primaryUser._id, {
+        person_application_id: primaryPersonApplication.id,
+        bank_account_number: accountApplicationResponse.account_number,
+        bank_account_id: accountApplicationResponse.account_id,
+      });
+
+      await this.bankAccountService.createOrUpdateBankAccount(
         secondaryUser._id,
-        accountApplicationResponse,
-        session,
+        {
+          person_application_id: secondaryPersonApplication.id,
+          bank_account_number: accountApplicationResponse.account_number,
+          bank_account_id: accountApplicationResponse.account_id,
+        },
       );
+
       await session.commitTransaction();
       return { message: 'Users successfully paired and bank account opened' };
     } catch (error) {
@@ -193,26 +186,16 @@ export class InvitationService {
   private async updateUserRecords(
     primaryUser: UserDocument,
     secondaryUser: UserDocument,
-    primaryPersonApplication: any,
-    secondaryPersonApplication: any,
     session,
   ): Promise<void> {
     await this.userModel.findByIdAndUpdate(
       primaryUser._id,
-      {
-        partnerId: secondaryUser._id,
-        person_application_id: primaryPersonApplication.id,
-      },
+      { partnerId: secondaryUser._id },
       { session },
     );
-
     await this.userModel.findByIdAndUpdate(
       secondaryUser._id,
-      {
-        partnerId: primaryUser._id,
-        isPrimary: false,
-        person_application_id: secondaryPersonApplication.id,
-      },
+      { partnerId: primaryUser._id, isPrimary: false },
       { session },
     );
   }

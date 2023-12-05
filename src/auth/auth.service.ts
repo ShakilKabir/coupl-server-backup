@@ -83,7 +83,6 @@ export class AuthService {
       throw new ConflictException('Invalid credentials');
     }
 
-    console.log('JWT Secret:', process.env.JWT_SECRET);
 
     const payload = { sub: user._id };
     return {
