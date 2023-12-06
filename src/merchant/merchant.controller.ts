@@ -1,3 +1,5 @@
+//merchant.controller.ts
+
 import { Controller, Get, UseGuards } from '@nestjs/common';
 import { MerchantService } from './merchant.service';
 import { Merchant } from './schema/merchant.schema';

@@ -83,7 +83,6 @@ export class AuthService {
       throw new ConflictException('Invalid credentials');
     }
 
-
     const payload = { sub: user._id };
     return {
       access_token: this.jwtService.sign(payload),

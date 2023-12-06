@@ -10,6 +10,8 @@ import { AuthModule } from './auth/auth.module';
 import { InvitationModule } from './invitation/invitation.module';
 import { BankAccountModule } from './bank-account/bank-account.module';
 import { MerchantModule } from './merchant/merchant.module';
+import { ProfileModule } from './profile/profile.module';
+import { TransactionModule } from './transaction/transaction.module';
 
 @Module({
   imports: [
@@ -22,6 +24,8 @@ import { MerchantModule } from './merchant/merchant.module';
     InvitationModule,
     BankAccountModule,
     MerchantModule,
+    ProfileModule,
+    TransactionModule,
   ],
   controllers: [AppController],
   providers: [AppService, DatabaseService],

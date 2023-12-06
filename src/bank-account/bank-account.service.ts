@@ -6,6 +6,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { UserDocument } from 'src/auth/schema/user.schema';
 import { BankAccount, BankAccountDocument } from './schema/bank-account.schema';
+import { createBasicAuth } from '../utils/basic-auth-provider';
 
 @Injectable()
 export class BankAccountService {
@@ -43,17 +44,12 @@ export class BankAccountService {
           },
         ],
         primary_person_application_id: primaryBankAccount.person_application_id,
-        account_product_id: 'apt_11jp5twnqtdbt9', // This should be the correct product ID for your application
-      };
-
-      const auth = {
-        username: process.env.TREASURY_PRIME_API_KEY_ID,
-        password: process.env.TREASURY_PRIME_API_SECRET_KEY,
+        account_product_id: 'apt_11jp5twnqtdbt9',
       };
 
       const config = {
-        auth: auth,
         headers: {
+          ...createBasicAuth(),
           'Content-Type': 'application/json',
         },
       };
@@ -77,14 +73,9 @@ export class BankAccountService {
     try {
       const personData = this.mapUserToPersonData(user);
 
-      const auth = {
-        username: process.env.TREASURY_PRIME_API_KEY_ID,
-        password: process.env.TREASURY_PRIME_API_SECRET_KEY,
-      };
-
       const config = {
-        auth: auth,
         headers: {
+          ...createBasicAuth(),
           'Content-Type': 'application/json',
         },
       };
@@ -125,14 +116,9 @@ export class BankAccountService {
     try {
       await this.delay(10000);
 
-      const auth = {
-        username: process.env.TREASURY_PRIME_API_KEY_ID,
-        password: process.env.TREASURY_PRIME_API_SECRET_KEY,
-      };
-
       const config = {
-        auth: auth,
         headers: {
+          ...createBasicAuth(),
           'Content-Type': 'application/json',
         },
       };
@@ -148,7 +134,7 @@ export class BankAccountService {
       if (accountData && accountData.account_number) {
         return {
           account_number: accountData.account_number,
-          account_id: accountApplicationId, // or another relevant identifier
+          account_id: accountData.account_id, 
         };
       } else {
         console.log('Account number not available yet');
@@ -164,12 +150,7 @@ export class BankAccountService {
   }
 
   async processAccountUpdate(webhookData: any): Promise<void> {
-    // Add your logic here to handle the account update
-    // For example, updating a database, notifying users, etc.
-    // Example:
-    // if (webhookData.account && webhookData.account.updated) {
-    //   // Perform actions based on the updated account data
-    // }
+    // logic will be added here to handle the account update
   }
 
   async createOrUpdateBankAccount(
