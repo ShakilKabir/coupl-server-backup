@@ -15,13 +15,14 @@ export class TransactionController {
   async createBookTransfer(@Req() req, @Body() body: any) {
     const userId = req.user.userId;
 
-    const { amount, to_account_id, type, category } = body;
+    const { amount, to_account_id, type, category, flow } = body;
     return this.transactionService.createBookTransfer(
       amount,
       to_account_id,
       userId,
       type,
       category,
+      flow,
     );
   }
 

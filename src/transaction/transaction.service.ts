@@ -29,6 +29,7 @@ export class TransactionService {
     userId: string,
     type: string,
     category: string,
+    flow: string,
   ): Promise<TransactionDocument> {
 
     try {
@@ -61,6 +62,7 @@ export class TransactionService {
         amount,
         type,
         category,
+        flow,
         date: new Date(response.data.created_at),
         userId,
       });
@@ -74,7 +76,7 @@ export class TransactionService {
   async getTransactionHistory(userId: string): Promise<Transaction[]> {
     return this.transactionModel.find({ userId }).exec();
   }
-  
+
   async getFilteredTransactionHistory(userId: string, query: QueryDto): Promise<Transaction[]> {
     const { startDate, endDate, type } = query;
   

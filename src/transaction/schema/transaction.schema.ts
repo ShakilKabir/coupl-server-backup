@@ -24,9 +24,16 @@ export class Transaction {
 
   @Prop({ required: true })
   userId: string;
-
+  
   @Prop()
   category: string;
+  
+  @Prop({ required: true })
+  flow: TransactionFlow;
 }
 
+enum TransactionFlow {
+  IN = 'INCOMING',
+  OUT = 'OUTGOING',
+}
 export const TransactionSchema = SchemaFactory.createForClass(Transaction);
