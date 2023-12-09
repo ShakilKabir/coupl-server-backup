@@ -1,3 +1,5 @@
+//transaction.service.ts
+
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -8,6 +10,7 @@ import {
   BankAccountDocument,
 } from 'src/bank-account/schema/bank-account.schema';
 import { createBasicAuth } from '../utils/basic-auth-provider';
+import { QueryDto } from './dto/query.dto';
 
 @Injectable()
 export class TransactionService {
@@ -66,5 +69,28 @@ export class TransactionService {
     } catch (error) {
       throw error;
     }
+  }
+
+  async getTransactionHistory(userId: string): Promise<Transaction[]> {
+    return this.transactionModel.find({ userId }).exec();
+  }
+  
+  async getFilteredTransactionHistory(userId: string, query: QueryDto): Promise<Transaction[]> {
+    const { startDate, endDate, type } = query;
+  
+    let filters: any = { userId };
+  
+    if (startDate && endDate) {
+      filters.date = {
+        $gte: startDate ? new Date(startDate) : undefined,
+        $lte: endDate ? new Date(endDate) : undefined,
+      };
+    }
+  
+    if (type) {
+      filters.type = type;
+    }
+  
+    return this.transactionModel.find(filters).exec();
   }
 }

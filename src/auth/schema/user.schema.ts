@@ -53,6 +53,9 @@ export class User {
 
     @Prop({ default: true })
     isPrimary: boolean;
+
+    @Prop()
+    profile_picture_url: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

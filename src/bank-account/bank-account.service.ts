@@ -7,6 +7,7 @@ import { Model, Types } from 'mongoose';
 import { UserDocument } from 'src/auth/schema/user.schema';
 import { BankAccount, BankAccountDocument } from './schema/bank-account.schema';
 import { createBasicAuth } from '../utils/basic-auth-provider';
+import { NotFoundException } from '@nestjs/common';
 
 @Injectable()
 export class BankAccountService {
@@ -134,7 +135,7 @@ export class BankAccountService {
       if (accountData && accountData.account_number) {
         return {
           account_number: accountData.account_number,
-          account_id: accountData.account_id, 
+          account_id: accountData.account_id,
         };
       } else {
         console.log('Account number not available yet');
@@ -164,5 +165,31 @@ export class BankAccountService {
       account.set(accountDetails);
     }
     return account.save();
+  }
+
+  async getAccountBalance(
+    userId: Types.ObjectId,
+  ): Promise<{ balance: number }> {
+    console.log('userId', userId);
+    const account = await this.bankAccountModel
+      .findOne({ userId: new Types.ObjectId(userId) })
+      .exec();
+    if (!account) {
+      throw new NotFoundException('Bank account not found');
+    }
+    const config = {
+      headers: {
+        ...createBasicAuth(),
+        'Content-Type': 'application/json',
+      },
+    };
+
+    const response = await this.httpService
+      .get(
+        `${process.env.TREASURY_PRIME_API}/account/${account.bank_account_id}`,
+        config,
+      )
+      .toPromise();
+    return { balance: response.data.available_balance };
   }
 }
