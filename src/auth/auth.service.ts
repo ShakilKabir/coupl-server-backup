@@ -1,4 +1,5 @@
 // auth.service.ts
+
 import {
   Injectable,
   ConflictException,
@@ -45,14 +46,14 @@ export class AuthService {
   }
 
   async signUp(signUpDto: SignUpDto): Promise<SignUpResponseDto> {
-    const { password, ...userDetails } = signUpDto;
-  
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const { pin, ...userDetails } = signUpDto;
+
+    const hashedPin = await bcrypt.hash(pin, 10);
     const newUser = new this.userModel({
       ...userDetails,
-      password: hashedPassword,
+      pin: hashedPin,
     });
-  
+
     try {
       await newUser.save();
       const payload = { sub: newUser._id };
@@ -66,10 +67,9 @@ export class AuthService {
       );
     }
   }
-  
 
   async signIn(signInDto: SignInDto): Promise<SignUpResponseDto> {
-    const { email_address, password } = signInDto;
+    const { email_address, pin } = signInDto;
 
     const user = await this.userModel.findOne({
       $or: [{ email_address: email_address }],
@@ -79,12 +79,10 @@ export class AuthService {
       throw new ConflictException('Invalid credentials');
     }
 
-    const isPasswordMatching = await bcrypt.compare(password, user.password);
-    if (!isPasswordMatching) {
+    const isPinMatching = await bcrypt.compare(pin, user.pin);
+    if (!isPinMatching) {
       throw new ConflictException('Invalid credentials');
     }
-
-    console.log('JWT Secret:', process.env.JWT_SECRET);
 
     const payload = { sub: user._id };
     return {

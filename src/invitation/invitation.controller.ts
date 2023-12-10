@@ -27,8 +27,10 @@ export class InvitationController {
     return this.invitationService.verifyInvitation(verifyInvitationDto);
   }
 
+  @UseGuards(AuthGuard('jwt'))
   @Post('pair-up')
-  async pairUp(@Body() pairUpDto: PairUpDto) {
-    return this.invitationService.pairUp(pairUpDto);
+  async pairUp(@Request() req, @Body() body: PairUpDto): Promise<{ message: string }> {
+    const secondaryId = req.user.userId;
+    return this.invitationService.pairUp(body.primaryId, secondaryId);
   }
 }
