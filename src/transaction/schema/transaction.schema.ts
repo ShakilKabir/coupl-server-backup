@@ -17,17 +17,17 @@ export class Transaction {
   amount: string;
 
   @Prop({ required: true })
-  type: string;
-
-  @Prop({ required: true })
   date: Date;
 
   @Prop({ required: true })
   userId: string;
-  
+
+  @Prop({ required: true })
+  accountId: string;
+
   @Prop()
   category: string;
-  
+
   @Prop({ required: true })
   flow: TransactionFlow;
 }
