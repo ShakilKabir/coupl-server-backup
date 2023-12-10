@@ -11,6 +11,10 @@ import { InvitationModule } from './invitation/invitation.module';
 // import { OnfidoService } from './onfido/onfido.service';
 // import { OnfidoModule } from './onfido/onfido.module';
 import { AlpacaModule } from './alpaca/alpaca.module';
+import { BankAccountModule } from './bank-account/bank-account.module';
+import { MerchantModule } from './merchant/merchant.module';
+import { ProfileModule } from './profile/profile.module';
+import { TransactionModule } from './transaction/transaction.module';
 
 @Module({
   imports: [
@@ -23,6 +27,10 @@ import { AlpacaModule } from './alpaca/alpaca.module';
     InvitationModule,
     AlpacaModule,
     // OnfidoModule,
+    BankAccountModule,
+    MerchantModule,
+    ProfileModule,
+    TransactionModule,
   ],
   controllers: [AppController],
   providers: [AppService, DatabaseService],

@@ -43,13 +43,19 @@ export class User {
     citizenship: string;
 
     @Prop({ required: true })
-    password: string;
+    pin: string;
 
     @Prop({ type: Address, _id: false, required: true })
     physical_address: Address;
 
     @Prop({ type: Types.ObjectId, ref: 'User', default: null })
     partnerId: Types.ObjectId | null;
+
+    @Prop({ default: true })
+    isPrimary: boolean;
+
+    @Prop()
+    profile_picture_url: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
