@@ -19,6 +19,7 @@ import {
   RespondToTransactionLimitDto,
   SetTransactionLimitDto,
 } from './dto/transaction-limit.dto';
+import { User, UserDocument } from 'src/auth/schema/user.schema';
 
 @Injectable()
 export class TransactionService {
@@ -30,6 +31,7 @@ export class TransactionService {
     private bankAccountModel: Model<BankAccountDocument>,
     @InjectModel(TransactionLimit.name)
     private transactionLimitModel: Model<TransactionLimitDocument>,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
   ) {}
 
   async createBookTransfer(
@@ -121,47 +123,63 @@ export class TransactionService {
     userId: string,
     setTransactionLimitDto: SetTransactionLimitDto,
   ): Promise<TransactionLimitDocument> {
-    const userBankAccount = await this.bankAccountModel.findOne({ userId: new Types.ObjectId(userId) });
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    const isPrimaryUser = user.isPrimary;
+
+    const userBankAccount = await this.bankAccountModel.findOne({
+      userId: user._id,
+    });
     if (!userBankAccount) {
       throw new NotFoundException('Bank account not found for user');
     }
-  
+
     const limit = new this.transactionLimitModel({
-      accountId: userBankAccount._id,
+      accountId: userBankAccount.bank_account_id,
       monthlyLimit: setTransactionLimitDto.monthlyLimit,
-      isApprovedBySelf: true,
-      isApprovedByPartner: false,
+      isApprovedByPrimary: isPrimaryUser,
+      isApprovedBySecondary: !isPrimaryUser,
     });
-  
+
     return limit.save();
   }
-  
 
   async respondToTransactionLimit(
     userId: string,
-    partnerId: string,
     responseDto: RespondToTransactionLimitDto,
   ): Promise<TransactionLimitDocument> {
-    const userBankAccount = await this.bankAccountModel.findOne({ userId: new Types.ObjectId(userId) });
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    const isPrimaryUser = user.isPrimary;
+
+    const userBankAccount = await this.bankAccountModel.findOne({
+      userId: user._id,
+    });
     if (!userBankAccount) {
       throw new NotFoundException('Bank account not found for user');
     }
-  
-    const limit = await this.transactionLimitModel.findOne({ accountId: userBankAccount._id });
+
+    const limit = await this.transactionLimitModel.findOne({
+      accountId: userBankAccount.bank_account_id,
+    });
     if (!limit) {
       throw new NotFoundException('Transaction limit not set');
     }
 
     if (responseDto.accept) {
-      if (userId === partnerId) {
-        limit.isApprovedBySelf = true;
+      if (isPrimaryUser) {
+        limit.isApprovedByPrimary = true;
       } else {
-        limit.isApprovedByPartner = true;
+        limit.isApprovedBySecondary = true;
       }
     } else {
       limit.monthlyLimit = responseDto.newLimit;
-      limit.isApprovedBySelf = userId === partnerId;
-      limit.isApprovedByPartner = userId !== partnerId;
+      limit.isApprovedByPrimary = isPrimaryUser;
+      limit.isApprovedBySecondary = !isPrimaryUser;
     }
 
     return limit.save();
@@ -171,13 +189,21 @@ export class TransactionService {
     userId: string,
     amount: number,
   ): Promise<void> {
-    const transactionLimit = await this.transactionLimitModel.findOne({
-      userId,
+    const userBankAccount = await this.bankAccountModel.findOne({
+      userId: new Types.ObjectId(userId),
     });
+    if (!userBankAccount) {
+      throw new NotFoundException('Bank account not found for user');
+    }
+
+    const transactionLimit = await this.transactionLimitModel.findOne({
+      accountId: userBankAccount._id,
+    });
+
     if (
       transactionLimit &&
-      transactionLimit.isApprovedBySelf &&
-      transactionLimit.isApprovedByPartner
+      transactionLimit.isApprovedByPrimary &&
+      transactionLimit.isApprovedBySecondary
     ) {
       if (
         transactionLimit.monthlyLimit <

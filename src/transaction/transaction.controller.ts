@@ -1,11 +1,24 @@
 //transaction.controller.ts
 
-import { Body, Controller, Post, Req, UseGuards, Get, Query, Patch, Param } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  Req,
+  UseGuards,
+  Get,
+  Query,
+  Patch,
+  Param,
+} from '@nestjs/common';
 import { TransactionService } from './transaction.service';
 import { AuthGuard } from '@nestjs/passport';
 import { Transaction } from './schema/transaction.schema';
 import { QueryDto } from './dto/query.dto';
-import { RespondToTransactionLimitDto, SetTransactionLimitDto } from './dto/transaction-limit.dto';
+import {
+  RespondToTransactionLimitDto,
+  SetTransactionLimitDto,
+} from './dto/transaction-limit.dto';
 import { TransactionLimit } from './schema/transaction-limit.schema';
 
 @Controller('transactions')
@@ -46,20 +59,27 @@ export class TransactionController {
 
   @UseGuards(AuthGuard('jwt'))
   @Post('set-limit')
-  async setTransactionLimit(@Req() req, @Body() setTransactionLimitDto: SetTransactionLimitDto): Promise<TransactionLimit> {
+  async setTransactionLimit(
+    @Req() req,
+    @Body() setTransactionLimitDto: SetTransactionLimitDto,
+  ): Promise<TransactionLimit> {
     const userId = req.user.userId;
-    return this.transactionService.setTransactionLimit(userId, setTransactionLimitDto);
+    return this.transactionService.setTransactionLimit(
+      userId,
+      setTransactionLimitDto,
+    );
   }
 
-  @Patch('respond-to-limit/:partnerId')
-async respondToTransactionLimit(
-  @Req() req,
-  @Param('partnerId') partnerId: string,
-  @Body() responseDto: RespondToTransactionLimitDto,
-): Promise<TransactionLimit> {
-  const userId = req.user.userId;
-  return this.transactionService.respondToTransactionLimit(userId, partnerId, responseDto);
-}
-
-
+  @UseGuards(AuthGuard('jwt'))
+  @Patch('respond-to-limit')
+  async respondToTransactionLimit(
+    @Req() req,
+    @Body() responseDto: RespondToTransactionLimitDto,
+  ): Promise<TransactionLimit> {
+    const userId = req.user.userId;
+    return this.transactionService.respondToTransactionLimit(
+      userId,
+      responseDto,
+    );
+  }
 }

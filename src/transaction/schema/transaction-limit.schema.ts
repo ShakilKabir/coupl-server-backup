@@ -14,14 +14,15 @@ export class TransactionLimit {
   monthlyLimit: number;
 
   @Prop({ default: false })
-  isApprovedBySelf: boolean;
+  isApprovedByPrimary: boolean;
 
   @Prop({ default: false })
-  isApprovedByPartner: boolean;
+  isApprovedBySecondary: boolean;
 
-  @Prop({ required: true, default:0 })
+  @Prop({ required: true, default: 0 })
   currentMonthSpent: number;
 }
+
 
 export const TransactionLimitSchema = SchemaFactory.createForClass(TransactionLimit);
 
