@@ -10,6 +10,7 @@ import { AuthModule } from './auth/auth.module';
 import { InvitationModule } from './invitation/invitation.module';
 // import { OnfidoService } from './onfido/onfido.service';
 // import { OnfidoModule } from './onfido/onfido.module';
+import { AlpacaModule } from './alpaca/alpaca.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { InvitationModule } from './invitation/invitation.module';
     MongooseModule.forRoot(process.env.DB_URI),
     AuthModule,
     InvitationModule,
+    AlpacaModule,
     // OnfidoModule,
   ],
   controllers: [AppController],
