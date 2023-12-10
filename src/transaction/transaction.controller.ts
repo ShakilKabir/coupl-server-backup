@@ -1,10 +1,12 @@
 //transaction.controller.ts
 
-import { Body, Controller, Post, Req, UseGuards, Get, Query } from '@nestjs/common';
+import { Body, Controller, Post, Req, UseGuards, Get, Query, Patch, Param } from '@nestjs/common';
 import { TransactionService } from './transaction.service';
 import { AuthGuard } from '@nestjs/passport';
 import { Transaction } from './schema/transaction.schema';
 import { QueryDto } from './dto/query.dto';
+import { SetTransactionLimitDto, UpdateTransactionLimitApprovalDto } from './dto/transaction-limit.dto';
+import { TransactionLimit } from './schema/transaction-limit.schema';
 
 @Controller('transactions')
 export class TransactionController {
@@ -42,4 +44,23 @@ export class TransactionController {
     const userId = req.user.userId;
     return this.transactionService.getFilteredTransactionHistory(userId, query);
   }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post('set-limit')
+  async setTransactionLimit(@Req() req, @Body() setTransactionLimitDto: SetTransactionLimitDto): Promise<TransactionLimit> {
+    const userId = req.user.userId;
+    return this.transactionService.setTransactionLimit(userId, setTransactionLimitDto);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Patch('update-limit-approval/:partnerId')
+  async updateTransactionLimitApproval(
+    @Req() req,
+    @Param('partnerId') partnerId: string,
+    @Body() updateTransactionLimitApprovalDto: UpdateTransactionLimitApprovalDto,
+  ): Promise<TransactionLimit> {
+    const userId = req.user.userId;
+    return this.transactionService.updateTransactionLimitApproval(userId, partnerId, updateTransactionLimitApprovalDto);
+  }
+
 }
