@@ -18,7 +18,7 @@ export class AlpacaController {
 
   @Post('accounts')
   createAccount(@Body() accountData: any) {
-    const clientAccData = this.alpacaService.createClientAccount(accountData);
+    return this.alpacaService.createClientAccount(accountData);
   }
 
   @Get('assets')
