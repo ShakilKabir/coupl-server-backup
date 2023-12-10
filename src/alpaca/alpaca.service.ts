@@ -72,8 +72,15 @@ export class AlpacaService {
   async createClientAccount(accountData: any) {
     const finalData = this.accountRequestBuilder({ ...accountData });
     const { data } = await this.AlpacaInstance.post('/v1/accounts', finalData);
+    // console.log(data);
     return data;
   }
+
+  // private async getUserByEmail(email: string) {
+  //   const { data } = await this.AlpacaInstance.get(`/v1/accounts`);
+  //   const duplicateUser = data.find((user: any) => user.email === email);
+  //   return data;
+  // }
 
   async createAchRelationship({ accountId, bankAccountData }) {
     //   const dbUser = await getUserByEmail(email);
