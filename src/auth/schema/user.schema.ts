@@ -59,6 +59,9 @@ export class User {
 
     @Prop()
     alpaca_account_id: string;
+
+    @Prop()
+    alpaca_relation_id: string;
   }
 
 export const UserSchema = SchemaFactory.createForClass(User);

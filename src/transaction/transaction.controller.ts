@@ -89,4 +89,33 @@ export class TransactionController {
     const { userId } = req.user;
     return this.transactionService.calculateOutflows(userId);
   }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('/outflows/month-wise')
+  async getMonthWiseOutflow(@Req() req): Promise<{ month: string; outflow: number }[]> {
+    const userId = req.user.userId;
+    return this.transactionService.getMonthWiseOutflow(userId);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('/outflows/quarter-wise')
+  async getQuarterWiseOutflow(@Req() req): Promise<{ quarter: string; outflow: number }[]> {
+    const userId = req.user.userId;
+    return this.transactionService.getQuarterWiseOutflow(userId);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('/outflows/month-and-quarter-wise')
+  async getCombinedOutflows(@Req() req): Promise<{ monthWise: any[], quarterWise: any[] }> {
+    const userId = req.user.userId;
+    return this.transactionService.getCombinedOutflows(userId);
+  }
+
+  
+  @UseGuards(AuthGuard('jwt'))
+  @Get('/outflows/category-wise')
+  async getCategoryWiseOutflowLast30Days(@Req() req): Promise<{ category: string; outflow: number }[]> {
+    const userId = req.user.userId;
+    return this.transactionService.getCategoryWiseOutflowLast30Days(userId);
+  }
 }
