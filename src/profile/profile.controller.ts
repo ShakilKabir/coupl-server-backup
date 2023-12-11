@@ -14,8 +14,6 @@ export class ProfileController {
   @Get()
   async getProfile(@Request() req): Promise<User> {
     const userId = req.user.userId;
-    console.log(req.user);
-    console.log(req.user.id);
     return await this.profileService.getProfile(userId);
   }
 

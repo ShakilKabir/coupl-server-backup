@@ -1,7 +1,13 @@
 //transaction.service.ts
 
 import { HttpService } from '@nestjs/axios';
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Transaction, TransactionDocument } from './schema/transaction.schema';
@@ -20,6 +26,7 @@ import {
   SetTransactionLimitDto,
 } from './dto/transaction-limit.dto';
 import { User, UserDocument } from 'src/auth/schema/user.schema';
+import { TransactionSummaryDto } from './dto/transaction-summary.dto';
 
 @Injectable()
 export class TransactionService {
@@ -35,14 +42,13 @@ export class TransactionService {
   ) {}
 
   async createBookTransfer(
-    amount: number,
-    toAccountId: string,
-    userId: string,
+    amount: string,
     category: string,
     flow: string,
+    userId: string,
   ): Promise<TransactionDocument> {
     try {
-      await this.validateTransactionLimit(userId, amount);
+      await this.validateTransactionLimit(userId, amount, flow);
 
       const userBankAccount = await this.bankAccountModel
         .findOne({ userId: new Types.ObjectId(userId) })
@@ -52,7 +58,17 @@ export class TransactionService {
         throw new Error('Bank account not found for user');
       }
 
-      const fromAccountId = userBankAccount.bank_account_id;
+      let fromAccountId, toAccountId;
+
+      if (flow === 'IN') {
+        toAccountId = userBankAccount.bank_account_id;
+        fromAccountId = 'acct_11jqakz3r7exb1';
+      } else if (flow === 'OUT') {
+        fromAccountId = userBankAccount.bank_account_id;
+        toAccountId = 'acct_11jqakz3r7exb1';
+      } else {
+        throw new Error('Invalid transaction flow');
+      }
 
       const response = await this.httpService
         .post(
@@ -79,7 +95,22 @@ export class TransactionService {
 
       return transaction.save();
     } catch (error) {
-      throw error;
+      if (error instanceof HttpException) {
+        throw error;
+      } else {
+        console.error('Error', error.message);
+        if (error.response) {
+          console.error(error.response.data);
+          console.error(error.response.status);
+          console.error(error.response.headers);
+        } else if (error.request) {
+          console.error(error.request);
+        }
+        throw new HttpException(
+          'Failed to create book transfer',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
     }
   }
 
@@ -101,7 +132,7 @@ export class TransactionService {
     userId: string,
     query: QueryDto,
   ): Promise<Transaction[]> {
-    const { startDate, endDate, type } = query;
+    const { startDate, endDate, category } = query;
 
     let filters: any = { userId };
 
@@ -112,8 +143,8 @@ export class TransactionService {
       };
     }
 
-    if (type) {
-      filters.type = type;
+    if (category) {
+      filters.category = category;
     }
 
     return this.transactionModel.find(filters).exec();
@@ -187,32 +218,98 @@ export class TransactionService {
 
   private async validateTransactionLimit(
     userId: string,
-    amount: number,
+    amount: string,
+    flow: string,
   ): Promise<void> {
-    const userBankAccount = await this.bankAccountModel.findOne({
-      userId: new Types.ObjectId(userId),
-    });
-    if (!userBankAccount) {
-      throw new NotFoundException('Bank account not found for user');
-    }
+    if (flow === 'OUT') {
+      const userBankAccount = await this.bankAccountModel.findOne({
+        userId: new Types.ObjectId(userId),
+      });
 
-    const transactionLimit = await this.transactionLimitModel.findOne({
-      accountId: userBankAccount._id,
-    });
-
-    if (
-      transactionLimit &&
-      transactionLimit.isApprovedByPrimary &&
-      transactionLimit.isApprovedBySecondary
-    ) {
-      if (
-        transactionLimit.monthlyLimit <
-        transactionLimit.currentMonthSpent + amount
-      ) {
-        throw new Error('Monthly spending limit exceeded');
+      if (!userBankAccount) {
+        throw new HttpException(
+          'Bank account not found for user',
+          HttpStatus.NOT_FOUND,
+        );
       }
-      transactionLimit.currentMonthSpent += amount;
-      await transactionLimit.save();
+
+      const transactionLimit = await this.transactionLimitModel.findOne({
+        accountId: userBankAccount.bank_account_id,
+      });
+
+      if (!transactionLimit) {
+        throw new HttpException(
+          'Transaction limit not found',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      const numericAmount = parseFloat(amount);
+      if (isNaN(numericAmount)) {
+        throw new HttpException(
+          'Invalid amount format',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      if (
+        transactionLimit.isApprovedByPrimary &&
+        transactionLimit.isApprovedBySecondary
+      ) {
+        if (
+          transactionLimit.monthlyLimit <
+          transactionLimit.currentMonthSpent + numericAmount
+        ) {
+          throw new HttpException(
+            'Monthly spending limit exceeded',
+            HttpStatus.FORBIDDEN,
+          );
+        }
+
+        transactionLimit.currentMonthSpent += numericAmount;
+        await transactionLimit.save();
+      }
     }
+  }
+  async calculateOutflows(userId: string): Promise<TransactionSummaryDto> {
+    const user = await this.userModel.findById(userId);
+    const account = await this.bankAccountModel.findOne({ userId: user._id });
+
+    console.log(user._id, userId, account)
+    if (!account) {
+      throw new NotFoundException('Bank account not found');
+    }
+
+    const partnerId = user.partnerId || user._id;
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const transactions = await this.transactionModel.find({
+      accountId: account.bank_account_id,
+      flow: 'OUT',
+      date: { $gte: thirtyDaysAgo },
+    });
+
+    console.log(transactions)
+
+    let totalOutflow = 0;
+    let primaryUserOutflow = 0;
+    let secondaryUserOutflow = 0;
+
+    transactions.forEach((transaction) => {
+      totalOutflow += parseFloat(transaction.amount);
+      if (transaction.userId === userId) {
+        primaryUserOutflow += parseFloat(transaction.amount);
+      } else if (transaction.userId === partnerId.toString()) {
+        secondaryUserOutflow += parseFloat(transaction.amount);
+      }
+    });
+
+    return {
+      totalOutflow,
+      primaryUserOutflow,
+      secondaryUserOutflow,
+    };
   }
 }

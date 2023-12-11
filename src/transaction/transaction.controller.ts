@@ -20,6 +20,7 @@ import {
   SetTransactionLimitDto,
 } from './dto/transaction-limit.dto';
 import { TransactionLimit } from './schema/transaction-limit.schema';
+import { TransactionSummaryDto } from './dto/transaction-summary.dto';
 
 @Controller('transactions')
 export class TransactionController {
@@ -30,13 +31,12 @@ export class TransactionController {
   async createBookTransfer(@Req() req, @Body() body: any) {
     const userId = req.user.userId;
 
-    const { amount, to_account_id, type, category, flow } = body;
+    const { amount, category, flow } = body;
     return this.transactionService.createBookTransfer(
       amount,
-      to_account_id,
-      userId,
       category,
       flow,
+      userId,
     );
   }
 
@@ -81,5 +81,12 @@ export class TransactionController {
       userId,
       responseDto,
     );
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('/outflows')
+  async getAccountOutflows(@Req() req): Promise<TransactionSummaryDto> {
+    const { userId } = req.user;
+    return this.transactionService.calculateOutflows(userId);
   }
 }

@@ -170,7 +170,6 @@ export class BankAccountService {
   async getAccountBalance(
     userId: Types.ObjectId,
   ): Promise<{ balance: number }> {
-    console.log('userId', userId);
     const account = await this.bankAccountModel
       .findOne({ userId: new Types.ObjectId(userId) })
       .exec();
