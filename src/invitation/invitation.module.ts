@@ -9,10 +9,8 @@ import { HttpModule } from '@nestjs/axios';
 import { BankAccountModule } from 'src/bank-account/bank-account.module';
 
 @Module({
-    imports: [
-        AuthModule, HttpModule, BankAccountModule
-    ],
-    controllers: [InvitationController],
-    providers: [InvitationService, BankAccountService],
+  imports: [AuthModule, HttpModule, BankAccountModule],
+  controllers: [InvitationController],
+  providers: [InvitationService, BankAccountService],
 })
 export class InvitationModule {}

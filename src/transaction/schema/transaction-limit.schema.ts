@@ -23,6 +23,5 @@ export class TransactionLimit {
   currentMonthSpent: number;
 }
 
-
-export const TransactionLimitSchema = SchemaFactory.createForClass(TransactionLimit);
-
+export const TransactionLimitSchema =
+  SchemaFactory.createForClass(TransactionLimit);

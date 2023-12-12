@@ -1,6 +1,14 @@
 // bank-account.controller.ts
 
-import { Controller, Post, Body, HttpCode, UseGuards, Get, Request } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  UseGuards,
+  Get,
+  Request,
+} from '@nestjs/common';
 import { BankAccountService } from './bank-account.service';
 import { AuthGuard } from '@nestjs/passport';
 
@@ -20,7 +28,7 @@ export class BankAccountController {
 
   @UseGuards(AuthGuard('jwt'))
   @Get('/balance')
-  async getAccountBalance(@Request() req): Promise<{balance:number}> {
+  async getAccountBalance(@Request() req): Promise<{ balance: number }> {
     const userId = req.user.userId;
     return this.bankAccountService.getAccountBalance(userId);
   }

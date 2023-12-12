@@ -1,7 +1,7 @@
 //bank-account.service.ts
 
 import { HttpService } from '@nestjs/axios';
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { UserDocument } from 'src/auth/schema/user.schema';
@@ -66,7 +66,7 @@ export class BankAccountService {
       return response.data.id;
     } catch (error) {
       console.error('Error in openBankAccount:', error);
-      throw error;
+      throw new InternalServerErrorException('Error opening bank account')
     }
   }
 
@@ -96,7 +96,7 @@ export class BankAccountService {
       return response.data;
     } catch (error) {
       console.error('Error in creatingPersonApplication:', error);
-      throw error;
+      throw new InternalServerErrorException('Error creating person application')
     }
   }
 
@@ -138,11 +138,11 @@ export class BankAccountService {
           account_id: accountData.account_id,
         };
       } else {
-        console.log('Account number not available yet');
+        throw new NotFoundException('Account number not available yet');
       }
     } catch (error) {
       console.error('Error in checkAndStoreAccountNumber:', error);
-      throw error;
+      throw new InternalServerErrorException('Error creating person application')
     }
   }
 

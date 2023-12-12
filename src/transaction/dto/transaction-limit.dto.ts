@@ -3,7 +3,6 @@
 import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class SetTransactionLimitDto {
-
   @IsNotEmpty()
   @IsNumber()
   readonly monthlyLimit: number;

@@ -19,7 +19,9 @@ export class ProfileController {
 
   @UseGuards(AuthGuard('jwt'))
   @Get()
-  async getProfile(@Request() req): Promise<{ user: User; partner: User; balance: number }> {
+  async getProfile(
+    @Request() req,
+  ): Promise<{ user: User; partner: User; balance: number }> {
     const userId = req.user.userId;
     return await this.profileService.getProfile(userId);
   }

@@ -9,9 +9,14 @@ import { BankAccountService } from 'src/bank-account/bank-account.service';
 
 @Injectable()
 export class ProfileService {
-  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>,private bankAccountService: BankAccountService) {}
+  constructor(
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private bankAccountService: BankAccountService,
+  ) {}
 
-  async getProfile(userId: string): Promise<{user: UserDocument, partner: UserDocument, balance: number}> {
+  async getProfile(
+    userId: string,
+  ): Promise<{ user: UserDocument; partner: UserDocument; balance: number }> {
     const user = await this.userModel.findById(userId).exec();
 
     if (!user) {
@@ -20,7 +25,8 @@ export class ProfileService {
 
     const objectId = new Types.ObjectId(userId);
     const partner = await this.userModel.findById(user.partnerId).exec();
-    const balanceData = await this.bankAccountService.getAccountBalance(objectId);
+    const balanceData =
+      await this.bankAccountService.getAccountBalance(objectId);
 
     return { user, partner, balance: balanceData.balance };
   }
@@ -30,7 +36,7 @@ export class ProfileService {
     updateProfileDto: UpdateProfileDto,
   ): Promise<User> {
     await this.userModel.findByIdAndUpdate(userId, updateProfileDto).exec();
-    const {user} = await this.getProfile(userId);
+    const { user } = await this.getProfile(userId);
     return user;
   }
 }

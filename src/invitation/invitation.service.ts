@@ -96,7 +96,7 @@ export class InvitationService {
   async pairUp(
     primaryId: string,
     secondaryId: string,
-  ): Promise<{ message: string }> {
+  ): Promise<{ message: string; primaryUserEmail: string }> {
     const session = await this.userModel.db.startSession();
     session.startTransaction();
 
@@ -136,7 +136,10 @@ export class InvitationService {
       );
 
       await session.commitTransaction();
-      return { message: 'Users successfully paired and bank account opened' };
+      return {
+        message: 'Users successfully paired and bank account opened',
+        primaryUserEmail: primaryUser.email_address,
+      };
     } catch (error) {
       await session.abortTransaction();
       throw new InternalServerErrorException(

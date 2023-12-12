@@ -12,7 +12,7 @@ export class BankAccount {
 
   @Prop({ default: null })
   person_application_id: string;
-  
+
   @Prop({ default: null })
   bank_account_number: string;
 
