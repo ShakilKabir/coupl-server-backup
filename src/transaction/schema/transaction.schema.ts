@@ -1,6 +1,7 @@
 //transaction.schema.ts
 
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import mongoose from 'mongoose';
 import { Document } from 'mongoose';
 
 export type TransactionDocument = Transaction & Document;
@@ -37,13 +38,11 @@ export class Transaction {
   @Prop()
   type: string;
   
-  @Prop()
+  @Prop({ type: mongoose.Schema.Types.Mixed })
   sender: any;
 
-  @Prop()
+  @Prop({ type: mongoose.Schema.Types.Mixed })
   receiver: any;
-
-
 }
 
 enum TransactionFlow {

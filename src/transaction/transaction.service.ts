@@ -49,8 +49,8 @@ export class TransactionService {
     flow: string,
     userId: string,
     type: string,
-    sender: string,
-    receiver: string,
+    sender: any,
+    receiver: any,
     header: string,
   ): Promise<TransactionDocument> {
     try {
@@ -138,9 +138,45 @@ export class TransactionService {
       throw new NotFoundException('Bank account not found');
     }
 
-    return this.transactionModel
-      .find({ accountId: userBankAccount.bank_account_id })
-      .exec();
+ const aggregation = [
+      {
+        $match: {
+          accountId: userBankAccount.bank_account_id,
+        },
+      },
+      {
+        $lookup: {
+          from: 'users', // replace with your User collection name if different
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'userDetails',
+        },
+      },
+      {
+        $unwind: '$userDetails',
+      },
+      {
+        $project: {
+          // include all transaction fields you need
+          fromAccountId: 1,
+          toAccountId: 1,
+          amount: 1,
+          date: 1,
+          userId: 1,
+          accountId: 1,
+          category: 1,
+          flow: 1,
+          header: 1,
+          type: 1,
+          sender: 1,
+          receiver: 1,
+          // Add the first_name from the User document
+          'userFirstName': '$userDetails.first_name',
+        },
+      },
+    ];
+
+    return await this.transactionModel.aggregate(aggregation).exec();
   }
 
   async getFilteredTransactionHistory(
@@ -290,7 +326,6 @@ export class TransactionService {
     const user = await this.userModel.findById(userId);
     const account = await this.bankAccountModel.findOne({ userId: user._id });
 
-    console.log(user._id, userId, account)
     if (!account) {
       throw new NotFoundException('Bank account not found');
     }
@@ -305,8 +340,6 @@ export class TransactionService {
       flow: 'OUT',
       date: { $gte: thirtyDaysAgo },
     });
-
-    console.log(transactions)
 
     let totalOutflow = 0;
     let primaryUserOutflow = 0;
