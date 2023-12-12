@@ -1,5 +1,13 @@
 // alpaca.controller.ts
-import { Controller, Get, Param, Post, Body } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Post,
+  Body,
+  Query,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { AlpacaService } from './alpaca.service';
 
 @Controller('investments')
@@ -22,8 +30,8 @@ export class AlpacaController {
   }
 
   @Get('assets')
-  getAllAssets(page, limit) {
-    return this.alpacaService.getAllAssets(page, limit);
+  getAllAssets(@Query('page', ParseIntPipe) page: number) {
+    return this.alpacaService.getAllAssets(page);
   }
 
   @Get('ach-relationships/:id')
@@ -150,5 +158,11 @@ export class AlpacaController {
     },
   ) {
     return this.alpacaService.createSellOrder(orderData);
+  }
+
+  // getStockLogo
+  @Get('company-logo/:symbol')
+  getStockLogo(@Param('symbol') symbol: string) {
+    return this.alpacaService.getStockLogo(symbol);
   }
 }
