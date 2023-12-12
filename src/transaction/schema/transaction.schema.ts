@@ -38,10 +38,10 @@ export class Transaction {
   type: string;
   
   @Prop()
-  sender: string;
+  sender: any;
 
   @Prop()
-  receiver: string;
+  receiver: any;
 
 
 }
