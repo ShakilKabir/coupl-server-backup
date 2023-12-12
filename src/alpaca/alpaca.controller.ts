@@ -22,8 +22,8 @@ export class AlpacaController {
   }
 
   @Get('assets')
-  getAllAssets() {
-    return this.alpacaService.getAllAssets();
+  getAllAssets(page, limit) {
+    return this.alpacaService.getAllAssets(page, limit);
   }
 
   @Get('ach-relationships/:id')
@@ -95,14 +95,45 @@ export class AlpacaController {
     return this.alpacaService.getGlobalQuote(symbol);
   }
 
+  @Get('company-details/:symbol')
+  getCompanyDetails(@Param('symbol') symbol: string) {
+    return this.alpacaService.getCompanyDetails(symbol);
+  }
+
   @Get('trading-data/:accountId')
   getTradingAccountbyId(@Param('accountId') accountId: string) {
     return this.alpacaService.getTradingAccountbyId(accountId);
   }
 
+  @Get('trading-position/:accountId')
+  getTradingPositionbyId(@Param('accountId') accountId: string) {
+    return this.alpacaService.getTradingPositionbyId(accountId);
+  }
+
+  @Get('trading-orders/:accountId')
+  getTradingOrdersbyId(@Param('accountId') accountId: string) {
+    return this.alpacaService.getTradingOrdersbyId(accountId);
+  }
+
   @Get('transfers/:accountId')
   getAccFundTransferHistory(@Param('accountId') accountId: string) {
     return this.alpacaService.getAccFundTransferHistory(accountId);
+  }
+
+  @Get('ishareEtfs')
+  getIshareEtfs() {
+    return this.alpacaService.getIshareEtfs();
+  }
+
+  @Get('ishareEtfs/:investmentType/:specificGoal')
+  getIshareEtfsbyGoals(
+    @Param('investmentType') investmentType: string,
+    @Param('specificGoal') specificGoal: string,
+  ) {
+    return this.alpacaService.getIshareEtfsbyGoals(
+      investmentType,
+      specificGoal,
+    );
   }
 
   @Post('create-sell-order')
