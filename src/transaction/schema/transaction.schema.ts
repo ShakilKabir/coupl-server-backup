@@ -30,6 +30,20 @@ export class Transaction {
 
   @Prop({ required: true })
   flow: TransactionFlow;
+
+  @Prop({ required: true })
+  header: string;
+
+  @Prop()
+  type: string;
+  
+  @Prop()
+  sender: string;
+
+  @Prop()
+  receiver: string;
+
+
 }
 
 enum TransactionFlow {

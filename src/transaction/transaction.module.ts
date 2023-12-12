@@ -10,6 +10,8 @@ import { BankAccountModule } from 'src/bank-account/bank-account.module';
 import { BankAccount, BankAccountSchema } from 'src/bank-account/schema/bank-account.schema';
 import { TransactionLimit, TransactionLimitSchema } from './schema/transaction-limit.schema';
 import { User, UserSchema } from 'src/auth/schema/user.schema';
+import { ProfileModule } from 'src/profile/profile.module';
+import { ProfileService } from 'src/profile/profile.service';
 
 @Module({
   imports: [
@@ -21,7 +23,7 @@ import { User, UserSchema } from 'src/auth/schema/user.schema';
       { name: BankAccount.name, schema: BankAccountSchema },
     ]),
   ],
-  providers: [TransactionService],
+  providers: [TransactionService, ProfileService],
   controllers: [TransactionController],
 })
 export class TransactionModule {}

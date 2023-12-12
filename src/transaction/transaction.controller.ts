@@ -31,7 +31,7 @@ export class TransactionController {
   async createBookTransfer(@Req() req, @Body() body: any) {
     const userId = req.user.userId;
 
-    const { category, flow } = body;
+    const { category, flow, type, sender, receiver, header } = body;
     let { amount } = body;
     amount = amount.toFixed(2);
     return this.transactionService.createBookTransfer(
@@ -39,6 +39,10 @@ export class TransactionController {
       category,
       flow,
       userId,
+      type,
+      sender,
+      receiver,
+      header,
     );
   }
 
@@ -94,29 +98,36 @@ export class TransactionController {
 
   @UseGuards(AuthGuard('jwt'))
   @Get('/outflows/month-wise')
-  async getMonthWiseOutflow(@Req() req): Promise<{ month: string; outflow: number }[]> {
+  async getMonthWiseOutflow(
+    @Req() req,
+  ): Promise<{ month: string; outflow: number }[]> {
     const userId = req.user.userId;
     return this.transactionService.getMonthWiseOutflow(userId);
   }
 
   @UseGuards(AuthGuard('jwt'))
   @Get('/outflows/quarter-wise')
-  async getQuarterWiseOutflow(@Req() req): Promise<{ quarter: string; outflow: number }[]> {
+  async getQuarterWiseOutflow(
+    @Req() req,
+  ): Promise<{ quarter: string; outflow: number }[]> {
     const userId = req.user.userId;
     return this.transactionService.getQuarterWiseOutflow(userId);
   }
 
   @UseGuards(AuthGuard('jwt'))
   @Get('/outflows/month-and-quarter-wise')
-  async getCombinedOutflows(@Req() req): Promise<{ monthWise: any[], quarterWise: any[] }> {
+  async getCombinedOutflows(
+    @Req() req,
+  ): Promise<{ monthWise: any[]; quarterWise: any[] }> {
     const userId = req.user.userId;
     return this.transactionService.getCombinedOutflows(userId);
   }
 
-  
   @UseGuards(AuthGuard('jwt'))
   @Get('/outflows/category-wise')
-  async getCategoryWiseOutflowLast30Days(@Req() req): Promise<{ category: string; outflow: number }[]> {
+  async getCategoryWiseOutflowLast30Days(
+    @Req() req,
+  ): Promise<{ category: string; outflow: number }[]> {
     const userId = req.user.userId;
     return this.transactionService.getCategoryWiseOutflowLast30Days(userId);
   }

@@ -27,6 +27,7 @@ import {
 } from './dto/transaction-limit.dto';
 import { User, UserDocument } from 'src/auth/schema/user.schema';
 import { TransactionSummaryDto } from './dto/transaction-summary.dto';
+import { ProfileService } from 'src/profile/profile.service';
 
 @Injectable()
 export class TransactionService {
@@ -39,6 +40,7 @@ export class TransactionService {
     @InjectModel(TransactionLimit.name)
     private transactionLimitModel: Model<TransactionLimitDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private profileService: ProfileService,
   ) {}
 
   async createBookTransfer(
@@ -46,6 +48,10 @@ export class TransactionService {
     category: string,
     flow: string,
     userId: string,
+    type: string,
+    sender: string,
+    receiver: string,
+    header: string,
   ): Promise<TransactionDocument> {
     try {
       await this.validateTransactionLimit(userId, amount, flow);
@@ -70,6 +76,12 @@ export class TransactionService {
         throw new Error('Invalid transaction flow');
       }
 
+      if(type){
+        let profile = await this.userModel.findOne({email_address : header}).exec()
+        const {user, partner} = await this.profileService.getProfile(profile._id);
+        header = user.first_name +' & '+ partner.first_name;
+      }
+
       const response = await this.httpService
         .post(
           `${process.env.TREASURY_PRIME_API}/book`,
@@ -88,6 +100,9 @@ export class TransactionService {
         amount,
         category,
         flow,
+        sender,
+        receiver,
+        header,
         accountId: userBankAccount.bank_account_id,
         date: new Date(response.data.created_at),
         userId,
