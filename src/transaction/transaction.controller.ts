@@ -31,7 +31,9 @@ export class TransactionController {
   async createBookTransfer(@Req() req, @Body() body: any) {
     const userId = req.user.userId;
 
-    const { amount, category, flow } = body;
+    const { category, flow } = body;
+    let { amount } = body;
+    amount = amount.toFixed(2);
     return this.transactionService.createBookTransfer(
       amount,
       category,
