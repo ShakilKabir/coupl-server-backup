@@ -9,6 +9,7 @@ export class AlpacaService {
   constructor() {}
   private readonly AlpacaInstance = getAlpacaInstance();
   private readonly alphaVantageUrl = 'https://www.alphavantage.co/query';
+  private readonly finnhubURL = 'https://finnhub.io/api/v1/stock/profile2';
 
   accountRequestBuilder(obj: any) {
     const country = String('USA').toUpperCase();
@@ -478,5 +479,11 @@ export class AlpacaService {
   getIshareEtfs(): any {
     const data = ishareETFs;
     return data;
+  }
+
+  async getStockLogo(symbol: string): Promise<any> {
+    const finnhuburl = `${this.finnhubURL}?symbol=${symbol}&token=${process.env.FINNHUB_API_KEY}`;
+    const { data } = await axios.get(finnhuburl);
+    return data.logo;
   }
 }
