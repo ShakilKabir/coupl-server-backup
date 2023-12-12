@@ -3,6 +3,7 @@ import { getAlpacaInstance } from '../utils/AlpacaInstance';
 import { faker } from '@faker-js/faker';
 import axios from 'axios';
 import { ishareETFs } from 'src/utils/etfdata';
+import { etfShareData } from 'src/utils/etfShareData';
 
 @Injectable()
 export class AlpacaService {
@@ -478,6 +479,11 @@ export class AlpacaService {
 
   getIshareEtfs(): any {
     const data = ishareETFs;
+    return data;
+  }
+
+  getIshareEtfData(symbol: string): any {
+    const data = etfShareData[symbol];
     return data;
   }
 

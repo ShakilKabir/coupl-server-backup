@@ -133,6 +133,12 @@ export class AlpacaController {
     return this.alpacaService.getIshareEtfs();
   }
 
+  //getIshareEtfData
+  @Get('ishareEtfData/:symbol')
+  getIshareEtfData(@Param('symbol') symbol: string) {
+    return this.alpacaService.getIshareEtfData(symbol);
+  }
+
   @Get('ishareEtfs/:investmentType/:specificGoal')
   getIshareEtfsbyGoals(
     @Param('investmentType') investmentType: string,
