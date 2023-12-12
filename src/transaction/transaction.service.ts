@@ -76,10 +76,14 @@ export class TransactionService {
         throw new Error('Invalid transaction flow');
       }
 
-      if(type){
-        let profile = await this.userModel.findOne({email_address : header}).exec()
-        const {user, partner} = await this.profileService.getProfile(profile._id);
-        header = user.first_name +' & '+ partner.first_name;
+      if (type) {
+        let profile = await this.userModel
+          .findOne({ email_address: header })
+          .exec();
+        const { user, partner } = await this.profileService.getProfile(
+          profile._id,
+        );
+        header = user.first_name + ' & ' + partner.first_name;
       }
 
       const response = await this.httpService
@@ -138,16 +142,21 @@ export class TransactionService {
       throw new NotFoundException('Bank account not found');
     }
 
- const aggregation = [
+    const aggregation = [
       {
         $match: {
           accountId: userBankAccount.bank_account_id,
         },
       },
       {
+        $addFields: {
+          convertedUserId: { $toObjectId: '$userId' },
+        },
+      },
+      {
         $lookup: {
           from: 'users', // replace with your User collection name if different
-          localField: 'userId',
+          localField: 'convertedUserId',
           foreignField: '_id',
           as: 'userDetails',
         },
@@ -171,7 +180,7 @@ export class TransactionService {
           sender: 1,
           receiver: 1,
           // Add the first_name from the User document
-          'userFirstName': '$userDetails.first_name',
+          userFirstName: '$userDetails.first_name',
         },
       },
     ];
@@ -209,7 +218,6 @@ export class TransactionService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    const isPrimaryUser = user.isPrimary;
 
     const userBankAccount = await this.bankAccountModel.findOne({
       userId: user._id,
@@ -218,11 +226,28 @@ export class TransactionService {
       throw new NotFoundException('Bank account not found for user');
     }
 
+    const existingLimitProposal = await this.transactionLimitModel.findOne({
+      accountId: userBankAccount.bank_account_id,
+    });
+
+    if (existingLimitProposal) {
+      if (
+        (existingLimitProposal.isApprovedByPrimary && !user.isPrimary) ||
+        (existingLimitProposal.isApprovedBySecondary && user.isPrimary)
+      ) {
+        throw new HttpException(
+          'A transaction limit proposal is already pending approval by your partner',
+          HttpStatus.FORBIDDEN,
+        );
+      }
+    }
+
+    // If no conflicting proposal, set the new limit
     const limit = new this.transactionLimitModel({
       accountId: userBankAccount.bank_account_id,
       monthlyLimit: setTransactionLimitDto.monthlyLimit,
-      isApprovedByPrimary: isPrimaryUser,
-      isApprovedBySecondary: !isPrimaryUser,
+      isApprovedByPrimary: user.isPrimary,
+      isApprovedBySecondary: !user.isPrimary,
     });
 
     return limit.save();
@@ -361,7 +386,9 @@ export class TransactionService {
     };
   }
 
-  async getMonthWiseOutflow(userId: string): Promise<{ month: string; outflow: number }[]> {
+  async getMonthWiseOutflow(
+    userId: string,
+  ): Promise<{ month: string; outflow: number }[]> {
     const user = await this.userModel.findById(userId);
     if (!user) {
       throw new NotFoundException('User not found');
@@ -375,28 +402,58 @@ export class TransactionService {
     fourMonthsAgo.setMonth(fourMonthsAgo.getMonth() - 4);
 
     const aggregation: any[] = [
-      { $match: { accountId: account.bank_account_id, date: { $gte: fourMonthsAgo }, flow: 'OUT' } },
-      { $group: { _id: { $month: "$date" }, totalOutflow: { $sum: { $toDouble: "$amount" } } } },
-      { $sort: { "_id": 1 } }
+      {
+        $match: {
+          accountId: account.bank_account_id,
+          date: { $gte: fourMonthsAgo },
+          flow: 'OUT',
+        },
+      },
+      {
+        $group: {
+          _id: { $month: '$date' },
+          totalOutflow: { $sum: { $toDouble: '$amount' } },
+        },
+      },
+      { $sort: { _id: 1 } },
     ];
 
     let results = await this.transactionModel.aggregate(aggregation).exec();
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     const currentMonth = new Date().getMonth();
-    results = months.map((month, index) => {
-      if (index > currentMonth - 4 && index <= currentMonth) {
-        const found = results.find(result => this.getMonthName(result._id) === month);
-        return {
-          month: month,
-          outflow: found ? found.totalOutflow : 0
-        };
-      }
-    }).filter(Boolean);
-  
+    results = months
+      .map((month, index) => {
+        if (index > currentMonth - 4 && index <= currentMonth) {
+          const found = results.find(
+            (result) => this.getMonthName(result._id) === month,
+          );
+          return {
+            month: month,
+            outflow: found ? found.totalOutflow : 0,
+          };
+        }
+      })
+      .filter(Boolean);
+
     return results;
   }
 
-  async getQuarterWiseOutflow(userId: string): Promise<{ quarter: string; outflow: number }[]> {
+  async getQuarterWiseOutflow(
+    userId: string,
+  ): Promise<{ quarter: string; outflow: number }[]> {
     const user = await this.userModel.findById(userId);
     if (!user) {
       throw new NotFoundException('User not found');
@@ -409,42 +466,57 @@ export class TransactionService {
     const currentYear = new Date().getFullYear();
 
     const aggregation: any[] = [
-      { $match: { accountId: account.bank_account_id, date: { $gte: new Date(`${currentYear}-01-01`) }, flow: 'OUT' } },
-      { 
-        $group: { 
-          _id: { 
-            $cond: [
-              { $lte: [{ $month: "$date" }, 3] }, "Jan-Mar",
-              { $cond: [
-                  { $lte: [{ $month: "$date" }, 6] }, "Apr-Jun",
-                  { $cond: [
-                      { $lte: [{ $month: "$date" }, 9] }, "Jul-Sep",
-                      "Oct-Dec"
-                  ]}
-              ]}
-            ] 
-          }, 
-          totalOutflow: { $sum: { $toDouble: "$amount" } }
-        } 
+      {
+        $match: {
+          accountId: account.bank_account_id,
+          date: { $gte: new Date(`${currentYear}-01-01`) },
+          flow: 'OUT',
+        },
       },
-      { $sort: { "_id": 1 } }
+      {
+        $group: {
+          _id: {
+            $cond: [
+              { $lte: [{ $month: '$date' }, 3] },
+              'Jan-Mar',
+              {
+                $cond: [
+                  { $lte: [{ $month: '$date' }, 6] },
+                  'Apr-Jun',
+                  {
+                    $cond: [
+                      { $lte: [{ $month: '$date' }, 9] },
+                      'Jul-Sep',
+                      'Oct-Dec',
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+          totalOutflow: { $sum: { $toDouble: '$amount' } },
+        },
+      },
+      { $sort: { _id: 1 } },
     ];
-  
+
     let results = await this.transactionModel.aggregate(aggregation).exec();
 
-    const quarters = ["Jan-Mar", "Apr-Jun", "Jul-Sep", "Oct-Dec"];
-    results = quarters.map(quarter => {
-      const found = results.find(result => result._id === quarter);
+    const quarters = ['Jan-Mar', 'Apr-Jun', 'Jul-Sep', 'Oct-Dec'];
+    results = quarters.map((quarter) => {
+      const found = results.find((result) => result._id === quarter);
       return {
         quarter: quarter,
-        outflow: found ? found.totalOutflow : 0
+        outflow: found ? found.totalOutflow : 0,
       };
     });
-  
+
     return results;
   }
 
-  async getCategoryWiseOutflowLast30Days(userId: string): Promise<{ category: string; outflow: number }[]> {
+  async getCategoryWiseOutflowLast30Days(
+    userId: string,
+  ): Promise<{ category: string; outflow: number }[]> {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -458,26 +530,52 @@ export class TransactionService {
     }
 
     const aggregation: any[] = [
-      { $match: { accountId: account.bank_account_id, date: { $gte: thirtyDaysAgo }, flow: 'OUT' } },
-      { $group: { _id: "$category", totalOutflow: { $sum: { $toDouble: "$amount" } } } },
-      { $sort: { "_id": 1 } }
+      {
+        $match: {
+          accountId: account.bank_account_id,
+          date: { $gte: thirtyDaysAgo },
+          flow: 'OUT',
+        },
+      },
+      {
+        $group: {
+          _id: '$category',
+          totalOutflow: { $sum: { $toDouble: '$amount' } },
+        },
+      },
+      { $sort: { _id: 1 } },
     ];
 
     const results = await this.transactionModel.aggregate(aggregation).exec();
-    return results.map(result => ({
+    return results.map((result) => ({
       category: result._id,
-      outflow: result.totalOutflow
+      outflow: result.totalOutflow,
     }));
   }
 
-  async getCombinedOutflows(userId: string): Promise<{ monthWise: any[], quarterWise: any[] }> {
+  async getCombinedOutflows(
+    userId: string,
+  ): Promise<{ monthWise: any[]; quarterWise: any[] }> {
     const monthWise = await this.getMonthWiseOutflow(userId);
     const quarterWise = await this.getQuarterWiseOutflow(userId);
     return { monthWise, quarterWise };
   }
-  
+
   private getMonthName(monthIndex: number): string {
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return months[monthIndex - 1];
   }
 }
