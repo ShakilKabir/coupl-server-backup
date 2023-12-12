@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { getAlpacaInstance } from '../utils/AlpacaInstance';
 import { faker } from '@faker-js/faker';
 import axios from 'axios';
+import { ishareETFs } from 'src/utils/etfdata';
 
 @Injectable()
 export class AlpacaService {
@@ -179,6 +180,33 @@ export class AlpacaService {
     return data;
   }
 
+  //for getting position (shares)
+  async getTradingPositionbyId(accountId: string): Promise<any> {
+    const { data } = await this.AlpacaInstance.get(
+      `/v1/trading/accounts/${accountId}/positions`,
+    );
+    return data;
+  }
+
+  //for getting orders (shares)
+  async getTradingOrdersbyId(accountId: string): Promise<any> {
+    const { data } = await this.AlpacaInstance.get(
+      `/v1/trading/accounts/${accountId}/orders`,
+    );
+    return data;
+  }
+
+  //for getting position (shares) by accId and symbol
+  async getTradingPositionbySymbol(
+    accountId: string,
+    symbol: string,
+  ): Promise<any> {
+    const { data } = await this.AlpacaInstance.get(
+      `/v1/trading/accounts/${accountId}/positions/${symbol}`,
+    );
+    return data;
+  }
+
   // **************************************************************
 
   async getAccFundTransferHistory(accountId: string) {
@@ -200,9 +228,43 @@ export class AlpacaService {
     return data;
   }
 
-  async getAllAssets() {
-    const { data } = await this.AlpacaInstance.get('/v1/assets');
-    return data;
+  // async getAllAssets() {
+  //   const { data } = await this.AlpacaInstance.get('/v1/assets');
+  //   const finalData = data.map(
+  //     ({ symbol, name, maintenance_margin_requirement }) => ({
+  //       symbol,
+  //       name,
+  //       maintenance_margin_requirement,
+  //     }),
+  //   );
+  //   return finalData;
+  // }
+
+  async getAllAssets(page = 1, limit = 20) {
+    try {
+      const { data } = await this.AlpacaInstance.get('/v1/assets');
+
+      // Calculate start and end indices based on page and limit
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+
+      // Slice the data array based on calculated indices
+      const paginatedData = data.slice(startIndex, endIndex);
+
+      const finalData = paginatedData.map(
+        ({ symbol, name, maintenance_margin_requirement }) => ({
+          symbol,
+          name,
+          maintenance_margin_requirement,
+        }),
+      );
+
+      return finalData;
+    } catch (error) {
+      // Handle errors, e.g., log or throw an exception
+      console.error('Error fetching assets:', error);
+      throw error;
+    }
   }
 
   async getUserAchRelationship(id: string) {
@@ -396,6 +458,25 @@ export class AlpacaService {
       `${this.alphaVantageUrl}?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${process.env.ALPHA_VINTAGE_KEY}`,
     );
 
+    return data;
+  }
+
+  async getCompanyDetails(symbol: string): Promise<any> {
+    const { data } = await axios.get(
+      `${this.alphaVantageUrl}?function=OVERVIEW&symbol=${symbol}&apikey=${process.env.ALPHA_VINTAGE_KEY}`,
+    );
+
+    return data;
+  }
+
+  getIshareEtfsbyGoals(investment_type: string, specific_goal: string): any {
+    const data = ishareETFs[`${investment_type}`][`${specific_goal}`];
+
+    return data;
+  }
+
+  getIshareEtfs(): any {
+    const data = ishareETFs;
     return data;
   }
 }
