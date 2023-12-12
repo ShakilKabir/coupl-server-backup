@@ -80,9 +80,16 @@ export class TransactionService {
         let profile = await this.userModel
           .findOne({ email_address: header })
           .exec();
+        if (!profile) {
+          throw new HttpException('Profile not found', HttpStatus.NOT_FOUND);
+        }
         const { user, partner } = await this.profileService.getProfile(
           profile._id,
         );
+        const userBankAccount = await this.bankAccountModel
+          .findOne({ userId: user._id })
+          .exec();
+        toAccountId = userBankAccount.bank_account_id;
         header = user.first_name + ' & ' + partner.first_name;
       }
 
