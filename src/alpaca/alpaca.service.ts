@@ -398,9 +398,10 @@ export class AlpacaService {
 
   async getAlphaVantageMoversData(size: number): Promise<any> {
     const { data } = await axios.get(
-      `${this.alphaVantageUrl}?function=TOP_GAINERS_LOSERS&apikey=${process.env.ALPHA_VINTAGE_KEY}`,
+      `${this.alphaVantageUrl}?function=TOP_GAINERS_LOSERS&apikey=demo`,
     );
 
+    // `${this.alphaVantageUrl}?function=TOP_GAINERS_LOSERS&apikey=${process.env.ALPHA_VINTAGE_KEY}`
     return data;
   }
 
@@ -534,6 +535,6 @@ export class AlpacaService {
       pcv.portfolioVals.push({ date: new Date(), value: recentPflVal });
       await this.updatePortfolioValue(traderAccId, pcv.portfolioVals);
     }
-    return { pcv, pastPflVals, recentPflVal };
+    return pcv;
   }
 }
