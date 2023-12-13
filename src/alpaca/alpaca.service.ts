@@ -463,11 +463,27 @@ export class AlpacaService {
   // }
 
   async getGlobalQuote(symbol: string): Promise<any> {
-    const { data } = await axios.get(
-      `${this.alphaVantageUrl}?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${process.env.ALPHA_VINTAGE_KEY}`,
-    );
+    try {
+      const finnhubResponse = await axios.get(
+        `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${process.env.FINNHUB_API_KEY}`,
+      );
 
-    return data;
+      const finnhubData = finnhubResponse.data;
+
+      return {
+        currentPrice: finnhubData.c,
+        change: finnhubData.d,
+        percentChange: finnhubData.dp,
+        high: finnhubData.h,
+        low: finnhubData.l,
+        open: finnhubData.o,
+        previousClose: finnhubData.pc,
+      };
+    } catch (error) {
+      // Handle errors or log them
+      console.error('Error fetching global quote:', error.message);
+      throw error;
+    }
   }
 
   async getCompanyDetails(symbol: string): Promise<any> {
