@@ -4,10 +4,17 @@ import { faker } from '@faker-js/faker';
 import axios from 'axios';
 import { ishareETFs } from 'src/utils/etfdata';
 import { etfShareData } from 'src/utils/etfShareData';
+import { etfShareDetails } from 'src/utils/etfShareDetails';
+import { PortfolioValue } from './schemas/portfolioValue.schema';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 
 @Injectable()
 export class AlpacaService {
-  constructor() {}
+  constructor(
+    @InjectModel(PortfolioValue.name)
+    private readonly portfolioValueModel: Model<PortfolioValue>,
+  ) {}
   private readonly AlpacaInstance = getAlpacaInstance();
   private readonly alphaVantageUrl = 'https://www.alphavantage.co/query';
   private readonly finnhubURL = 'https://finnhub.io/api/v1/stock/profile2';
@@ -487,9 +494,47 @@ export class AlpacaService {
     return data;
   }
 
+  getIshareEtfDetails(symbol: string): any {
+    const data = etfShareDetails[symbol];
+    return data;
+  }
+
   async getStockLogo(symbol: string): Promise<any> {
     const finnhuburl = `${this.finnhubURL}?symbol=${symbol}&token=${process.env.FINNHUB_API_KEY}`;
     const { data } = await axios.get(finnhuburl);
-    return data.logo;
+    return data;
+  }
+
+  async updatePortfolioValue(
+    traderAccId: string,
+    value: { date: Date; value: number }[],
+  ) {
+    // Assuming you want to update the entire portfolioVals array
+    return this.portfolioValueModel
+      .updateOne({ traderAccId }, { portfolioVals: value })
+      .exec();
+  }
+
+  async getPastPortfolioVals(traderAccId: string) {
+    let pcv: any = await this.portfolioValueModel
+      .findOne({ traderAccId })
+      .exec();
+    if (!pcv) {
+      pcv = { traderAccId, portfolioVals: [] };
+      await this.portfolioValueModel.create(pcv);
+    }
+    return pcv;
+  }
+
+  async getPortfolioChartValue(traderAccId: string) {
+    let pcv: any = await this.getPastPortfolioVals(traderAccId);
+    const traderAccount = await this.getTradingAccountbyId(traderAccId);
+    const recentPflVal = await traderAccount['position_market_value'];
+    const pastPflVals = pcv.portfolioVals.map((x) => x.value);
+    if (!pastPflVals.includes(recentPflVal)) {
+      pcv.portfolioVals.push({ date: new Date(), value: recentPflVal });
+      await this.updatePortfolioValue(traderAccId, pcv.portfolioVals);
+    }
+    return { pcv, pastPflVals, recentPflVal };
   }
 }
