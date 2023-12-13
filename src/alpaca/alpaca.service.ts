@@ -471,6 +471,7 @@ export class AlpacaService {
       const finnhubData = finnhubResponse.data;
 
       return {
+        symbol: symbol,
         currentPrice: finnhubData.c,
         change: finnhubData.d,
         percentChange: finnhubData.dp,
