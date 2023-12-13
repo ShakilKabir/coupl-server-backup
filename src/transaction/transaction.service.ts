@@ -83,7 +83,7 @@ export class TransactionService {
         if (!profile) {
           throw new HttpException('Profile not found', HttpStatus.NOT_FOUND);
         }
-        const { user, partner } = await this.profileService.getProfile(
+        const { user, partner } = await this.profileService.getHomeDetails(
           profile._id,
         );
         const userBankAccount = await this.bankAccountModel
@@ -238,10 +238,12 @@ export class TransactionService {
     });
 
     if (existingLimitProposal) {
-      if (
-        (existingLimitProposal.isApprovedByPrimary && !user.isPrimary) ||
-        (existingLimitProposal.isApprovedBySecondary && user.isPrimary)
-      ) {
+      // Check if there's an existing proposal and if it's already approved
+      if (existingLimitProposal.isApprovedByPrimary && existingLimitProposal.isApprovedBySecondary) {
+        // If both users have approved, allow updating the limit
+        existingLimitProposal.monthlyLimit = setTransactionLimitDto.monthlyLimit;
+        return existingLimitProposal.save();
+      } else {
         throw new HttpException(
           'A transaction limit proposal is already pending approval by your partner',
           HttpStatus.FORBIDDEN,
@@ -321,10 +323,7 @@ export class TransactionService {
       });
 
       if (!transactionLimit) {
-        throw new HttpException(
-          'Transaction limit not found',
-          HttpStatus.NOT_FOUND,
-        );
+        return;
       }
 
       const numericAmount = parseFloat(amount);
@@ -336,24 +335,20 @@ export class TransactionService {
       }
 
       if (
-        transactionLimit.isApprovedByPrimary &&
-        transactionLimit.isApprovedBySecondary
+        transactionLimit.monthlyLimit === 0 ||
+        transactionLimit.monthlyLimit >= transactionLimit.currentMonthSpent + numericAmount
       ) {
-        if (
-          transactionLimit.monthlyLimit <
-          transactionLimit.currentMonthSpent + numericAmount
-        ) {
-          throw new HttpException(
-            'Monthly spending limit exceeded',
-            HttpStatus.FORBIDDEN,
-          );
-        }
-
         transactionLimit.currentMonthSpent += numericAmount;
         await transactionLimit.save();
+      } else {
+        throw new HttpException(
+          'Monthly spending limit exceeded',
+          HttpStatus.FORBIDDEN,
+        );
       }
     }
   }
+
   async calculateOutflows(userId: string): Promise<TransactionSummaryDto> {
     const user = await this.userModel.findById(userId);
     const account = await this.bankAccountModel.findOne({ userId: user._id });
