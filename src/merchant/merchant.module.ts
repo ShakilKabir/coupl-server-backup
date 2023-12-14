@@ -8,7 +8,9 @@ import { MerchantController } from './merchant.controller';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: Merchant.name, schema: MerchantSchema }]),
+    MongooseModule.forFeature([
+      { name: Merchant.name, schema: MerchantSchema },
+    ]),
   ],
   providers: [MerchantService],
   exports: [MerchantService],

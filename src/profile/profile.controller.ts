@@ -1,6 +1,13 @@
 //profile.controller.ts
 
-import { Controller, Get, Request, UseGuards, Patch, Body } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Request,
+  UseGuards,
+  Patch,
+  Body,
+} from '@nestjs/common';
 import { ProfileService } from './profile.service';
 import { AuthGuard } from '@nestjs/passport';
 import { User } from 'src/auth/schema/user.schema';
@@ -14,16 +21,27 @@ export class ProfileController {
   @Get()
   async getProfile(@Request() req): Promise<User> {
     const userId = req.user.userId;
-    console.log(req.user);
-    console.log(req.user.id);
     return await this.profileService.getProfile(userId);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('home')
+  async getHomeDetails(@Request() req): Promise<{
+    user: User;
+    partner: User;
+    balance: number;
+    monthlyLimit: number;
+    currentMonthSpent: number;
+  }> {
+    const userId = req.user.userId;
+    return await this.profileService.getHomeDetails(userId);
   }
 
   @UseGuards(AuthGuard('jwt'))
   @Get('email')
   async getEmail(@Request() req): Promise<{ email: string }> {
     const userId = req.user.userId;
-    const user = await this.profileService.getProfile(userId);
+    const  user  = await this.profileService.getProfile(userId);
     return { email: user.email_address };
   }
 
