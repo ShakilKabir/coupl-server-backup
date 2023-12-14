@@ -42,7 +42,7 @@ export class InvitationService {
     partnerEmail: string,
   ): Promise<{ message: string }> {
     const invitationToken = this.generateInvitationToken(userId);
-    const invitationLink = `https://your-app-url.com/signup?invitationToken=${invitationToken}`;
+    const invitationLink = `https://bankingwithduo.vercel.app/invite?invitationToken=${invitationToken}`;
 
     const mailOptions = {
       from: 'your-email@example.com',

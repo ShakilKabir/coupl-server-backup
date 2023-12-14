@@ -7,12 +7,15 @@ import { Model, Types } from 'mongoose';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { BankAccountService } from 'src/bank-account/bank-account.service';
 import { TransactionLimit, TransactionLimitDocument } from 'src/transaction/schema/transaction-limit.schema';
+import { BankAccount, BankAccountDocument } from 'src/bank-account/schema/bank-account.schema';
 
 @Injectable()
 export class ProfileService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private bankAccountService: BankAccountService,
+    @InjectModel(BankAccount.name)
+    private bankAccountModel: Model<BankAccountDocument>,
     @InjectModel(TransactionLimit.name) private transactionLimitModel: Model<TransactionLimitDocument>,
   ) {}
 
@@ -37,8 +40,11 @@ export class ProfileService {
     const objectId = new Types.ObjectId(userId);
     const partner = await this.userModel.findById(user.partnerId).exec();
     const balanceData = await this.bankAccountService.getAccountBalance(objectId);
+    const userBankAccount = await this.bankAccountModel.findOne({
+      userId: user._id,
+    });
 
-    const transactionLimit = await this.transactionLimitModel.findOne({ accountId: objectId });
+    const transactionLimit = await this.transactionLimitModel.findOne({ accountId: userBankAccount.bank_account_id });
 
     return {
       user,

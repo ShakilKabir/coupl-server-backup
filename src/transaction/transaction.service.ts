@@ -28,6 +28,7 @@ import {
 import { User, UserDocument } from 'src/auth/schema/user.schema';
 import { TransactionSummaryDto } from './dto/transaction-summary.dto';
 import { ProfileService } from 'src/profile/profile.service';
+import { LimitStatusDto } from './dto/limit-status.dto';
 
 @Injectable()
 export class TransactionService {
@@ -233,33 +234,44 @@ export class TransactionService {
       throw new NotFoundException('Bank account not found for user');
     }
 
-    const existingLimitProposal = await this.transactionLimitModel.findOne({
+    let transactionLimit = await this.transactionLimitModel.findOne({
       accountId: userBankAccount.bank_account_id,
     });
 
-    if (existingLimitProposal) {
-      // Check if there's an existing proposal and if it's already approved
-      if (existingLimitProposal.isApprovedByPrimary && existingLimitProposal.isApprovedBySecondary) {
-        // If both users have approved, allow updating the limit
-        existingLimitProposal.monthlyLimit = setTransactionLimitDto.monthlyLimit;
-        return existingLimitProposal.save();
-      } else {
-        throw new HttpException(
-          'A transaction limit proposal is already pending approval by your partner',
-          HttpStatus.FORBIDDEN,
-        );
-      }
+    const canSetNewLimit =
+      !transactionLimit ||
+      (!transactionLimit.isApprovedByPrimary &&
+        !transactionLimit.isApprovedBySecondary) ||
+      (transactionLimit.isApprovedByPrimary &&
+        transactionLimit.isApprovedBySecondary);
+
+    if (!canSetNewLimit) {
+      throw new HttpException(
+        'A transaction limit proposal is already pending approval by your partner',
+        HttpStatus.FORBIDDEN,
+      );
     }
 
-    // If no conflicting proposal, set the new limit
-    const limit = new this.transactionLimitModel({
-      accountId: userBankAccount.bank_account_id,
-      monthlyLimit: setTransactionLimitDto.monthlyLimit,
-      isApprovedByPrimary: user.isPrimary,
-      isApprovedBySecondary: !user.isPrimary,
-    });
+    if (transactionLimit) {
+      transactionLimit.proposedMonthlyLimit =
+        setTransactionLimitDto.monthlyLimit;
+      if (
+        transactionLimit.monthlyLimit !== setTransactionLimitDto.monthlyLimit
+      ) {
+        transactionLimit.isApprovedByPrimary = user.isPrimary;
+        transactionLimit.isApprovedBySecondary = !user.isPrimary;
+      }
+    } else {
+      transactionLimit = new this.transactionLimitModel({
+        accountId: userBankAccount.bank_account_id,
+        monthlyLimit: 0,
+        proposedMonthlyLimit: setTransactionLimitDto.monthlyLimit,
+        isApprovedByPrimary: user.isPrimary,
+        isApprovedBySecondary: !user.isPrimary,
+      });
+    }
 
-    return limit.save();
+    return transactionLimit.save();
   }
 
   async respondToTransactionLimit(
@@ -287,18 +299,72 @@ export class TransactionService {
     }
 
     if (responseDto.accept) {
+      // Accepting the proposed limit
       if (isPrimaryUser) {
         limit.isApprovedByPrimary = true;
       } else {
         limit.isApprovedBySecondary = true;
       }
+  
+      if (limit.isApprovedByPrimary && limit.isApprovedBySecondary) {
+        limit.monthlyLimit = limit.proposedMonthlyLimit;
+        limit.proposedMonthlyLimit = undefined;
+      }
     } else {
-      limit.monthlyLimit = responseDto.newLimit;
-      limit.isApprovedByPrimary = isPrimaryUser;
-      limit.isApprovedBySecondary = !isPrimaryUser;
+      if (responseDto.newLimit !== undefined) {
+        limit.proposedMonthlyLimit = responseDto.newLimit;
+        limit.isApprovedByPrimary = isPrimaryUser;
+        limit.isApprovedBySecondary = !isPrimaryUser;
+      } else {
+        // Simply rejecting without proposing a new limit
+        limit.isApprovedByPrimary = false;
+        limit.isApprovedBySecondary = false;
+        limit.proposedMonthlyLimit = undefined;
+      }
     }
 
     return limit.save();
+  }
+
+  async getLimitStatus(userId: string): Promise<LimitStatusDto> {
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const userBankAccount = await this.bankAccountModel.findOne({
+      userId: user._id,
+    });
+    if (!userBankAccount) {
+      throw new NotFoundException('Bank account not found');
+    }
+
+    const transactionLimit = await this.transactionLimitModel.findOne({
+      accountId: userBankAccount.bank_account_id,
+    });
+
+    const limitStatus = new LimitStatusDto();
+    limitStatus.hasLimit =
+      transactionLimit != null && transactionLimit.monthlyLimit > 0;
+    limitStatus.currentLimit = transactionLimit?.monthlyLimit;
+    limitStatus.proposedLimit = transactionLimit?.proposedMonthlyLimit ?? 0;
+    limitStatus.isApproved =
+      transactionLimit?.isApprovedByPrimary &&
+      transactionLimit?.isApprovedBySecondary;
+
+    if (transactionLimit) {
+      if (user.isPrimary === transactionLimit.isApprovedByPrimary) {
+        limitStatus.userRole = 'Proposer';
+      } else if (transactionLimit.proposedMonthlyLimit != null) {
+        limitStatus.userRole = 'Receiver';
+      } else {
+        limitStatus.userRole = 'None';
+      }
+    } else {
+      limitStatus.userRole = 'None';
+    }
+
+    return limitStatus;
   }
 
   private async validateTransactionLimit(
@@ -322,7 +388,7 @@ export class TransactionService {
         accountId: userBankAccount.bank_account_id,
       });
 
-      if (!transactionLimit) {
+      if (!transactionLimit || transactionLimit.monthlyLimit === 0) {
         return;
       }
 
@@ -335,8 +401,8 @@ export class TransactionService {
       }
 
       if (
-        transactionLimit.monthlyLimit === 0 ||
-        transactionLimit.monthlyLimit >= transactionLimit.currentMonthSpent + numericAmount
+        transactionLimit.monthlyLimit >=
+        transactionLimit.currentMonthSpent + numericAmount
       ) {
         transactionLimit.currentMonthSpent += numericAmount;
         await transactionLimit.save();
