@@ -194,7 +194,17 @@ export class AlpacaService {
     const { data } = await this.AlpacaInstance.get(
       `/v1/trading/accounts/${accountId}/positions`,
     );
-    return data;
+
+    const dataWithLogo = await Promise.all(
+      data.map(async (item: any) => {
+        const logo = await this.getStockLogo(item.symbol);
+        return {
+          ...item,
+          logo: logo,
+        };
+      }),
+    );
+    return dataWithLogo;
   }
 
   //for getting orders (shares)
@@ -402,8 +412,28 @@ export class AlpacaService {
       `${this.alphaVantageUrl}?function=TOP_GAINERS_LOSERS&apikey=demo`,
     );
 
+    const topGainersWithLogo = await Promise.all(
+      data.top_gainers.map(async (item: any) => {
+        const logo = await this.getStockLogo(item.ticker);
+        return {
+          ...item,
+          logo: logo,
+        };
+      }),
+    );
+
+    const activelyTradedWithLogo = await Promise.all(
+      data.most_actively_traded.map(async (item: any) => {
+        const logo = await this.getStockLogo(item.ticker);
+        return {
+          ...item,
+          logo: logo,
+        };
+      }),
+    );
+
     // `${this.alphaVantageUrl}?function=TOP_GAINERS_LOSERS&apikey=${process.env.ALPHA_VINTAGE_KEY}`
-    return data;
+    return { topGainersWithLogo, activelyTradedWithLogo };
   }
 
   // private convertRawToDesired(rawData: any, size: number): any {
@@ -520,7 +550,7 @@ export class AlpacaService {
   async getStockLogo(symbol: string): Promise<any> {
     const finnhuburl = `${this.finnhubURL}?symbol=${symbol}&token=${process.env.FINNHUB_API_KEY}`;
     const { data } = await axios.get(finnhuburl);
-    return data;
+    return { name: data.name, logo: data.logo };
   }
 
   async updatePortfolioValue(
