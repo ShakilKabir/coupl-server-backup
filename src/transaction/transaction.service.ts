@@ -163,7 +163,7 @@ export class TransactionService {
       },
       {
         $lookup: {
-          from: 'users', // replace with your User collection name if different
+          from: 'users',
           localField: 'convertedUserId',
           foreignField: '_id',
           as: 'userDetails',
@@ -174,7 +174,6 @@ export class TransactionService {
       },
       {
         $project: {
-          // include all transaction fields you need
           fromAccountId: 1,
           toAccountId: 1,
           amount: 1,
@@ -187,7 +186,6 @@ export class TransactionService {
           type: 1,
           sender: 1,
           receiver: 1,
-          // Add the first_name from the User document
           userFirstName: '$userDetails.first_name',
         },
       },
@@ -408,12 +406,31 @@ export class TransactionService {
         await transactionLimit.save();
       } else {
         throw new HttpException(
-          'Monthly spending limit exceeded',
+          `Monthly spending limit exceeded`,
           HttpStatus.FORBIDDEN,
         );
       }
     }
   }
+
+  async calculateCurrentMonthOutflow(userId: string): Promise<number> {
+    const currentMonthStart = new Date();
+    currentMonthStart.setDate(1);
+    currentMonthStart.setHours(0, 0, 0, 0);
+    const account = await this.bankAccountModel.findOne({ userId});
+  
+    const nextMonthStart = new Date(currentMonthStart);
+    nextMonthStart.setMonth(currentMonthStart.getMonth() + 1);
+  
+    const outflowTransactions = await this.transactionModel.find({
+      accountId: account.bank_account_id,
+      flow: 'OUT',
+      date: { $gte: currentMonthStart, $lt: nextMonthStart },
+    }).exec();
+  
+    return outflowTransactions.reduce((total, transaction) => total + parseFloat(transaction.amount), 0);
+  }
+  
 
   async calculateOutflows(userId: string): Promise<TransactionSummaryDto> {
     const user = await this.userModel.findById(userId);
