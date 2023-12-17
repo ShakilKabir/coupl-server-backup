@@ -12,5 +12,5 @@ export class QueryDto {
   endDate?: string;
 
   @IsOptional()
-  type?: string;
+  category?: string;
 }

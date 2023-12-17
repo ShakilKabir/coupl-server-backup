@@ -387,6 +387,7 @@ export class AlpacaService {
         },
       };
 
+      // console.log(config);
       // Send the API request using NestJS HttpService
       const response = await axios.get(
         'http://api.marketstack.com/v1/eod',

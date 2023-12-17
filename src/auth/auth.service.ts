@@ -5,6 +5,7 @@ import {
   ConflictException,
   InternalServerErrorException,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -63,7 +64,7 @@ export class AuthService {
       };
     } catch (error) {
       throw new InternalServerErrorException(
-        'There was an error processing your request',
+        'Failed to create user account. Please try again later.',
       );
     }
   }
@@ -76,12 +77,12 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new ConflictException('Invalid credentials');
+      throw new UnauthorizedException('Invalid credentials');
     }
 
     const isPinMatching = await bcrypt.compare(pin, user.pin);
     if (!isPinMatching) {
-      throw new ConflictException('Invalid credentials');
+      throw new UnauthorizedException('Invalid credentials');
     }
 
     const payload = { sub: user._id };

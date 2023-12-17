@@ -1,14 +1,19 @@
 //transaction-limit.dto.ts
 
-import { IsNotEmpty, IsNumber } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export class SetTransactionLimitDto {
   @IsNotEmpty()
   @IsNumber()
+  @Min(0)
   readonly monthlyLimit: number;
 }
 
-export class UpdateTransactionLimitApprovalDto {
+export class RespondToTransactionLimitDto {
   @IsNotEmpty()
-  readonly isApproved: boolean;
+  readonly accept: boolean;
+
+  @IsOptional()
+  @IsNumber()
+  readonly newLimit?: number;
 }

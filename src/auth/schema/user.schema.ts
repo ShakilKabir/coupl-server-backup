@@ -24,38 +24,44 @@ class Address {
 
 @Schema()
 export class User {
-    @Prop({ required: true })
-    first_name: string;
+  @Prop({ required: true })
+  first_name: string;
 
-    @Prop({ required: true })
-    last_name: string;
+  @Prop({ required: true })
+  last_name: string;
 
-    @Prop({ required: true, unique: true })
-    email_address: string;
+  @Prop({ required: true, unique: true })
+  email_address: string;
 
-    @Prop({ required: true })
-    phone_number: string;
+  @Prop({ required: true })
+  phone_number: string;
 
-    @Prop({ required: true })
-    date_of_birth: string;
+  @Prop({ required: true })
+  date_of_birth: string;
 
-    @Prop({ required: true })
-    citizenship: string;
+  @Prop({ required: true })
+  citizenship: string;
 
-    @Prop({ required: true })
-    pin: string;
+  @Prop({ required: true })
+  pin: string;
 
-    @Prop({ type: Address, _id: false, required: true })
-    physical_address: Address;
+  @Prop({ type: Address, _id: false, required: true })
+  physical_address: Address;
 
-    @Prop({ type: Types.ObjectId, ref: 'User', default: null })
-    partnerId: Types.ObjectId | null;
+  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  partnerId: Types.ObjectId | null;
 
-    @Prop({ default: true })
-    isPrimary: boolean;
+  @Prop({ default: true })
+  isPrimary: boolean;
 
-    @Prop()
-    profile_picture_url: string;
+  @Prop()
+  profile_picture_url: string;
+
+  @Prop()
+  alpaca_account_id: string;
+
+  @Prop()
+  alpaca_relation_id: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

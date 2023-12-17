@@ -7,20 +7,24 @@ export type TransactionLimitDocument = TransactionLimit & Document;
 
 @Schema()
 export class TransactionLimit {
-  @Prop({ type: Types.ObjectId, ref: 'User' })
-  userId: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: 'Account' })
+  accountId: Types.ObjectId;
 
   @Prop({ required: true })
   monthlyLimit: number;
 
   @Prop({ default: false })
-  isApprovedBySelf: boolean;
+  isApprovedByPrimary: boolean;
 
   @Prop({ default: false })
-  isApprovedByPartner: boolean;
+  isApprovedBySecondary: boolean;
 
-  @Prop({ required: true })
+  @Prop({ required: true, default: 0 })
   currentMonthSpent: number;
+
+  @Prop()
+  proposedMonthlyLimit?: number;
 }
 
-export const TransactionLimitSchema = SchemaFactory.createForClass(TransactionLimit);
+export const TransactionLimitSchema =
+  SchemaFactory.createForClass(TransactionLimit);
