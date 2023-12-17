@@ -55,6 +55,35 @@ export class ProfileService {
     };
   }
 
+  async getFilteredHomeDetails(
+    userId: string,
+  ): Promise<{
+    userFirstName: string;
+    partnerFirstName: string;
+    balance: number;
+    monthlyLimit: number;
+    currentMonthSpent: number;
+  }> {
+    const user = await this.getProfile(userId);
+    const {first_name : userFirstName} = user;
+    const objectId = new Types.ObjectId(userId);
+    const {first_name : partnerFirstName} = await this.userModel.findById(user.partnerId).exec();
+    const balanceData = await this.bankAccountService.getAccountBalance(objectId);
+    const userBankAccount = await this.bankAccountModel.findOne({
+      userId: user._id,
+    });
+
+    const transactionLimit = await this.transactionLimitModel.findOne({ accountId: userBankAccount.bank_account_id });
+
+    return {
+      userFirstName,
+      partnerFirstName,
+      balance: balanceData.balance,
+      monthlyLimit: transactionLimit ? transactionLimit.monthlyLimit : 0,
+      currentMonthSpent: transactionLimit ? transactionLimit.currentMonthSpent : 0,
+    };
+  }
+
   async updateProfile(
     userId: string,
     updateProfileDto: UpdateProfileDto,

@@ -38,6 +38,19 @@ export class ProfileController {
   }
 
   @UseGuards(AuthGuard('jwt'))
+  @Get('filtered-home')
+  async getFilteredHomeDetails(@Request() req): Promise<{
+    userFirstName: string;
+    partnerFirstName: string;
+    balance: number;
+    monthlyLimit: number;
+    currentMonthSpent: number;
+  }> {
+    const userId = req.user.userId;
+    return await this.profileService.getFilteredHomeDetails(userId);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
   @Get('email')
   async getEmail(@Request() req): Promise<{ email: string }> {
     const userId = req.user.userId;
