@@ -170,6 +170,7 @@ export class BankAccountService {
   async getAccountBalance(
     userId: Types.ObjectId,
   ): Promise<{ balance: number }> {
+    const data = await this.getBankAccountDetails(userId);
     const account = await this.bankAccountModel
       .findOne({ userId: new Types.ObjectId(userId) })
       .exec();
@@ -189,6 +190,32 @@ export class BankAccountService {
         config,
       )
       .toPromise();
-    return { balance: response.data.available_balance };
+    return { balance: data.available_balance };
+  }
+
+  async getBankAccountDetails(
+    userId: Types.ObjectId,
+  ): Promise<any> {
+    const account = await this.bankAccountModel
+      .findOne({ userId: new Types.ObjectId(userId) })
+      .exec();
+    if (!account) {
+      throw new NotFoundException('Bank account not found');
+    }
+    const config = {
+      headers: {
+        ...createBasicAuth(),
+        'Content-Type': 'application/json',
+      },
+    };
+
+    const response = await this.httpService
+      .get(
+        `${process.env.TREASURY_PRIME_API}/account/${account.bank_account_id}`,
+        config,
+      )
+      .toPromise();
+      const { account_type, bank_id, available_balance, name, currency, routing_number, status, account_number } = response.data;
+      return { account_type, bank_id, available_balance, name, currency, routing_number, status, account_number };
   }
 }

@@ -27,6 +27,14 @@ export class BankAccountController {
   }
 
   @UseGuards(AuthGuard('jwt'))
+  @Get()
+  async getBankAccountDetails(@Request() req): Promise<any>{
+    const userId = req.user.userId;
+    return this.bankAccountService.getBankAccountDetails(userId);
+  }
+
+
+  @UseGuards(AuthGuard('jwt'))
   @Get('/balance')
   async getAccountBalance(@Request() req): Promise<{ balance: number }> {
     const userId = req.user.userId;
