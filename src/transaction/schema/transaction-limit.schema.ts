@@ -21,8 +21,10 @@ export class TransactionLimit {
 
   @Prop({ required: true, default: 0 })
   currentMonthSpent: number;
+
+  @Prop()
+  proposedMonthlyLimit?: number;
 }
 
-
-export const TransactionLimitSchema = SchemaFactory.createForClass(TransactionLimit);
-
+export const TransactionLimitSchema =
+  SchemaFactory.createForClass(TransactionLimit);

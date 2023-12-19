@@ -133,6 +133,18 @@ export class AlpacaController {
     return this.alpacaService.getIshareEtfs();
   }
 
+  //getIshareEtfData
+  @Get('ishareEtfData/:symbol')
+  getIshareEtfData(@Param('symbol') symbol: string) {
+    return this.alpacaService.getIshareEtfData(symbol);
+  }
+
+  //getIshareEtfDetails
+  @Get('ishareEtfDetails/:symbol')
+  getIshareEtfDetails(@Param('symbol') symbol: string) {
+    return this.alpacaService.getIshareEtfDetails(symbol);
+  }
+
   @Get('ishareEtfs/:investmentType/:specificGoal')
   getIshareEtfsbyGoals(
     @Param('investmentType') investmentType: string,
@@ -164,5 +176,17 @@ export class AlpacaController {
   @Get('company-logo/:symbol')
   getStockLogo(@Param('symbol') symbol: string) {
     return this.alpacaService.getStockLogo(symbol);
+  }
+
+  //getPortfolioChartValue
+  @Get('portfolio-chart-values/:accountId')
+  getPortfolioChartValue(@Param('accountId') accountId: string) {
+    return this.alpacaService.getPortfolioChartValue(accountId);
+  }
+
+  //getPastPortfolioVals
+  @Get('get-past-portfolio-vals/:accountId')
+  getPastPortfolioVals(@Param('accountId') accountId: string) {
+    return this.alpacaService.getPastPortfolioVals(accountId);
   }
 }

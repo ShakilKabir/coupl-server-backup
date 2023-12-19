@@ -20,6 +20,8 @@ import { BankAccount, BankAccountSchema } from './schema/bank-account.schema';
     MongooseModule.forFeature([
       { name: BankAccount.name, schema: BankAccountSchema },
     ]),
+    BankAccountService,
+    BankAccountModule,
   ],
 })
 export class BankAccountModule {}

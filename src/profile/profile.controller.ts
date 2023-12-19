@@ -19,16 +19,43 @@ export class ProfileController {
 
   @UseGuards(AuthGuard('jwt'))
   @Get()
-  async getProfile(@Request() req): Promise<{ user: User; partner: User }> {
+  async getProfile(@Request() req): Promise<User> {
     const userId = req.user.userId;
     return await this.profileService.getProfile(userId);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('home')
+  async getHomeDetails(@Request() req): Promise<{
+    user: User;
+    partner: User;
+    balance: number;
+    monthlyLimit: number;
+    currentMonthSpent: number;
+  }> {
+    const userId = req.user.userId;
+    return await this.profileService.getHomeDetails(userId);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('filtered-home')
+  async getFilteredHomeDetails(@Request() req): Promise<{
+    userFirstName: string;
+    userLastName: string;
+    partnerFirstName: string;
+    balance: number;
+    monthlyLimit: number;
+    currentMonthSpent: number;
+  }> {
+    const userId = req.user.userId;
+    return await this.profileService.getFilteredHomeDetails(userId);
   }
 
   @UseGuards(AuthGuard('jwt'))
   @Get('email')
   async getEmail(@Request() req): Promise<{ email: string }> {
     const userId = req.user.userId;
-    const { user } = await this.profileService.getProfile(userId);
+    const  user  = await this.profileService.getProfile(userId);
     return { email: user.email_address };
   }
 
@@ -40,5 +67,11 @@ export class ProfileController {
   ): Promise<User> {
     const userId = req.user.userId;
     return this.profileService.updateProfile(userId, updateProfileDto);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('getOffers')
+  async getOffers(): Promise<any[]> {
+    return this.profileService.getOffers();
   }
 }

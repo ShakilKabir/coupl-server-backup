@@ -3,10 +3,18 @@ import { getAlpacaInstance } from '../utils/AlpacaInstance';
 import { faker } from '@faker-js/faker';
 import axios from 'axios';
 import { ishareETFs } from 'src/utils/etfdata';
+import { etfShareData } from 'src/utils/etfShareData';
+import { etfShareDetails } from 'src/utils/etfShareDetails';
+import { PortfolioValue } from './schemas/portfolioValue.schema';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 
 @Injectable()
 export class AlpacaService {
-  constructor() {}
+  constructor(
+    @InjectModel(PortfolioValue.name)
+    private readonly portfolioValueModel: Model<PortfolioValue>,
+  ) {}
   private readonly AlpacaInstance = getAlpacaInstance();
   private readonly alphaVantageUrl = 'https://www.alphavantage.co/query';
   private readonly finnhubURL = 'https://finnhub.io/api/v1/stock/profile2';
@@ -186,7 +194,17 @@ export class AlpacaService {
     const { data } = await this.AlpacaInstance.get(
       `/v1/trading/accounts/${accountId}/positions`,
     );
-    return data;
+
+    const dataWithLogo = await Promise.all(
+      data.map(async (item: any) => {
+        const logo = await this.getStockLogo(item.symbol);
+        return {
+          ...item,
+          logo: logo,
+        };
+      }),
+    );
+    return dataWithLogo;
   }
 
   //for getting orders (shares)
@@ -391,10 +409,31 @@ export class AlpacaService {
 
   async getAlphaVantageMoversData(size: number): Promise<any> {
     const { data } = await axios.get(
-      `${this.alphaVantageUrl}?function=TOP_GAINERS_LOSERS&apikey=${process.env.ALPHA_VINTAGE_KEY}`,
+      `${this.alphaVantageUrl}?function=TOP_GAINERS_LOSERS&apikey=demo`,
     );
 
-    return data;
+    const topGainersWithLogo = await Promise.all(
+      data.top_gainers.map(async (item: any) => {
+        const logo = await this.getStockLogo(item.ticker);
+        return {
+          ...item,
+          logo: logo,
+        };
+      }),
+    );
+
+    const activelyTradedWithLogo = await Promise.all(
+      data.most_actively_traded.map(async (item: any) => {
+        const logo = await this.getStockLogo(item.ticker);
+        return {
+          ...item,
+          logo: logo,
+        };
+      }),
+    );
+
+    // `${this.alphaVantageUrl}?function=TOP_GAINERS_LOSERS&apikey=${process.env.ALPHA_VINTAGE_KEY}`
+    return { topGainersWithLogo, activelyTradedWithLogo };
   }
 
   // private convertRawToDesired(rawData: any, size: number): any {
@@ -455,11 +494,28 @@ export class AlpacaService {
   // }
 
   async getGlobalQuote(symbol: string): Promise<any> {
-    const { data } = await axios.get(
-      `${this.alphaVantageUrl}?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${process.env.ALPHA_VINTAGE_KEY}`,
-    );
+    try {
+      const finnhubResponse = await axios.get(
+        `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${process.env.FINNHUB_API_KEY}`,
+      );
 
-    return data;
+      const finnhubData = finnhubResponse.data;
+
+      return {
+        symbol: symbol,
+        currentPrice: finnhubData.c,
+        change: finnhubData.d,
+        percentChange: finnhubData.dp,
+        high: finnhubData.h,
+        low: finnhubData.l,
+        open: finnhubData.o,
+        previousClose: finnhubData.pc,
+      };
+    } catch (error) {
+      // Handle errors or log them
+      console.error('Error fetching global quote:', error.message);
+      throw error;
+    }
   }
 
   async getCompanyDetails(symbol: string): Promise<any> {
@@ -481,9 +537,52 @@ export class AlpacaService {
     return data;
   }
 
+  getIshareEtfData(symbol: string): any {
+    const data = etfShareData[symbol];
+    return data;
+  }
+
+  getIshareEtfDetails(symbol: string): any {
+    const data = etfShareDetails[symbol];
+    return data;
+  }
+
   async getStockLogo(symbol: string): Promise<any> {
     const finnhuburl = `${this.finnhubURL}?symbol=${symbol}&token=${process.env.FINNHUB_API_KEY}`;
     const { data } = await axios.get(finnhuburl);
-    return data.logo;
+    return { name: data.name, logo: data.logo };
+  }
+
+  async updatePortfolioValue(
+    traderAccId: string,
+    value: { date: Date; value: number }[],
+  ) {
+    // Assuming you want to update the entire portfolioVals array
+    return this.portfolioValueModel
+      .updateOne({ traderAccId }, { portfolioVals: value })
+      .exec();
+  }
+
+  async getPastPortfolioVals(traderAccId: string) {
+    let pcv: any = await this.portfolioValueModel
+      .findOne({ traderAccId })
+      .exec();
+    if (!pcv) {
+      pcv = { traderAccId, portfolioVals: [] };
+      await this.portfolioValueModel.create(pcv);
+    }
+    return pcv;
+  }
+
+  async getPortfolioChartValue(traderAccId: string) {
+    let pcv: any = await this.getPastPortfolioVals(traderAccId);
+    const traderAccount = await this.getTradingAccountbyId(traderAccId);
+    const recentPflVal = await traderAccount['position_market_value'];
+    const pastPflVals = pcv.portfolioVals.map((x) => x.value);
+    if (!pastPflVals.includes(recentPflVal)) {
+      pcv.portfolioVals.push({ date: new Date(), value: recentPflVal });
+      await this.updatePortfolioValue(traderAccId, pcv.portfolioVals);
+    }
+    return pcv;
   }
 }

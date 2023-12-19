@@ -21,6 +21,7 @@ import {
 } from './dto/transaction-limit.dto';
 import { TransactionLimit } from './schema/transaction-limit.schema';
 import { TransactionSummaryDto } from './dto/transaction-summary.dto';
+import { LimitStatusDto } from './dto/limit-status.dto';
 
 @Controller('transactions')
 export class TransactionController {
@@ -87,6 +88,13 @@ export class TransactionController {
       userId,
       responseDto,
     );
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('/limit-status')
+  async getLimitStatus(@Req() req): Promise<LimitStatusDto> {
+    const userId = req.user.userId;
+    return this.transactionService.getLimitStatus(userId);
   }
 
   @UseGuards(AuthGuard('jwt'))

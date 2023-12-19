@@ -37,7 +37,7 @@ export class Transaction {
 
   @Prop()
   type: string;
-  
+
   @Prop({ type: mongoose.Schema.Types.Mixed })
   sender: any;
 

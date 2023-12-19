@@ -13,8 +13,7 @@ export class AuthController {
 
   @Post('signup')
   async signUp(@Body() signUpDto: SignUpDto): Promise<SignUpResponseDto> {
- 
-      return this.authService.signUp(signUpDto);
+    return this.authService.signUp(signUpDto);
   }
 
   @Post('signin')
@@ -39,7 +38,6 @@ export class AuthController {
   async verifyOTP(@Body() verifyOtpDto: VerifyOtpDto) {
     return this.authService.verifyOTP(verifyOtpDto);
   }
-
 
   //using twilio
   // @Post('send-otp')

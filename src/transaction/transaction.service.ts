@@ -28,6 +28,7 @@ import {
 import { User, UserDocument } from 'src/auth/schema/user.schema';
 import { TransactionSummaryDto } from './dto/transaction-summary.dto';
 import { ProfileService } from 'src/profile/profile.service';
+import { LimitStatusDto } from './dto/limit-status.dto';
 
 @Injectable()
 export class TransactionService {
@@ -80,9 +81,16 @@ export class TransactionService {
         let profile = await this.userModel
           .findOne({ email_address: header })
           .exec();
-        const { user, partner } = await this.profileService.getProfile(
+        if (!profile) {
+          throw new HttpException('Profile not found', HttpStatus.NOT_FOUND);
+        }
+        const { user, partner } = await this.profileService.getHomeDetails(
           profile._id,
         );
+        const userBankAccount = await this.bankAccountModel
+          .findOne({ userId: user._id })
+          .exec();
+        toAccountId = userBankAccount.bank_account_id;
         header = user.first_name + ' & ' + partner.first_name;
       }
 
@@ -155,7 +163,7 @@ export class TransactionService {
       },
       {
         $lookup: {
-          from: 'users', // replace with your User collection name if different
+          from: 'users',
           localField: 'convertedUserId',
           foreignField: '_id',
           as: 'userDetails',
@@ -166,7 +174,6 @@ export class TransactionService {
       },
       {
         $project: {
-          // include all transaction fields you need
           fromAccountId: 1,
           toAccountId: 1,
           amount: 1,
@@ -179,7 +186,6 @@ export class TransactionService {
           type: 1,
           sender: 1,
           receiver: 1,
-          // Add the first_name from the User document
           userFirstName: '$userDetails.first_name',
         },
       },
@@ -226,31 +232,44 @@ export class TransactionService {
       throw new NotFoundException('Bank account not found for user');
     }
 
-    const existingLimitProposal = await this.transactionLimitModel.findOne({
+    let transactionLimit = await this.transactionLimitModel.findOne({
       accountId: userBankAccount.bank_account_id,
     });
 
-    if (existingLimitProposal) {
-      if (
-        (existingLimitProposal.isApprovedByPrimary && !user.isPrimary) ||
-        (existingLimitProposal.isApprovedBySecondary && user.isPrimary)
-      ) {
-        throw new HttpException(
-          'A transaction limit proposal is already pending approval by your partner',
-          HttpStatus.FORBIDDEN,
-        );
-      }
+    const canSetNewLimit =
+      !transactionLimit ||
+      (!transactionLimit.isApprovedByPrimary &&
+        !transactionLimit.isApprovedBySecondary) ||
+      (transactionLimit.isApprovedByPrimary &&
+        transactionLimit.isApprovedBySecondary);
+
+    if (!canSetNewLimit) {
+      throw new HttpException(
+        'A transaction limit proposal is already pending approval by your partner',
+        HttpStatus.FORBIDDEN,
+      );
     }
 
-    // If no conflicting proposal, set the new limit
-    const limit = new this.transactionLimitModel({
-      accountId: userBankAccount.bank_account_id,
-      monthlyLimit: setTransactionLimitDto.monthlyLimit,
-      isApprovedByPrimary: user.isPrimary,
-      isApprovedBySecondary: !user.isPrimary,
-    });
+    if (transactionLimit) {
+      transactionLimit.proposedMonthlyLimit =
+        setTransactionLimitDto.monthlyLimit;
+      if (
+        transactionLimit.monthlyLimit !== setTransactionLimitDto.monthlyLimit
+      ) {
+        transactionLimit.isApprovedByPrimary = user.isPrimary;
+        transactionLimit.isApprovedBySecondary = !user.isPrimary;
+      }
+    } else {
+      transactionLimit = new this.transactionLimitModel({
+        accountId: userBankAccount.bank_account_id,
+        monthlyLimit: 0,
+        proposedMonthlyLimit: setTransactionLimitDto.monthlyLimit,
+        isApprovedByPrimary: user.isPrimary,
+        isApprovedBySecondary: !user.isPrimary,
+      });
+    }
 
-    return limit.save();
+    return transactionLimit.save();
   }
 
   async respondToTransactionLimit(
@@ -278,18 +297,72 @@ export class TransactionService {
     }
 
     if (responseDto.accept) {
+      // Accepting the proposed limit
       if (isPrimaryUser) {
         limit.isApprovedByPrimary = true;
       } else {
         limit.isApprovedBySecondary = true;
       }
+  
+      if (limit.isApprovedByPrimary && limit.isApprovedBySecondary) {
+        limit.monthlyLimit = limit.proposedMonthlyLimit;
+        limit.proposedMonthlyLimit = undefined;
+      }
     } else {
-      limit.monthlyLimit = responseDto.newLimit;
-      limit.isApprovedByPrimary = isPrimaryUser;
-      limit.isApprovedBySecondary = !isPrimaryUser;
+      if (responseDto.newLimit !== undefined) {
+        limit.proposedMonthlyLimit = responseDto.newLimit;
+        limit.isApprovedByPrimary = isPrimaryUser;
+        limit.isApprovedBySecondary = !isPrimaryUser;
+      } else {
+        // Simply rejecting without proposing a new limit
+        limit.isApprovedByPrimary = false;
+        limit.isApprovedBySecondary = false;
+        limit.proposedMonthlyLimit = undefined;
+      }
     }
 
     return limit.save();
+  }
+
+  async getLimitStatus(userId: string): Promise<LimitStatusDto> {
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const userBankAccount = await this.bankAccountModel.findOne({
+      userId: user._id,
+    });
+    if (!userBankAccount) {
+      throw new NotFoundException('Bank account not found');
+    }
+
+    const transactionLimit = await this.transactionLimitModel.findOne({
+      accountId: userBankAccount.bank_account_id,
+    });
+
+    const limitStatus = new LimitStatusDto();
+    limitStatus.hasLimit =
+      transactionLimit != null && transactionLimit.monthlyLimit > 0;
+    limitStatus.currentLimit = transactionLimit?.monthlyLimit;
+    limitStatus.proposedLimit = transactionLimit?.proposedMonthlyLimit ?? 0;
+    limitStatus.isApproved =
+      transactionLimit?.isApprovedByPrimary &&
+      transactionLimit?.isApprovedBySecondary;
+
+    if (transactionLimit) {
+      if (user.isPrimary === transactionLimit.isApprovedByPrimary) {
+        limitStatus.userRole = 'Proposer';
+      } else if (transactionLimit.proposedMonthlyLimit != null) {
+        limitStatus.userRole = 'Receiver';
+      } else {
+        limitStatus.userRole = 'None';
+      }
+    } else {
+      limitStatus.userRole = 'None';
+    }
+
+    return limitStatus;
   }
 
   private async validateTransactionLimit(
@@ -313,11 +386,8 @@ export class TransactionService {
         accountId: userBankAccount.bank_account_id,
       });
 
-      if (!transactionLimit) {
-        throw new HttpException(
-          'Transaction limit not found',
-          HttpStatus.NOT_FOUND,
-        );
+      if (!transactionLimit || transactionLimit.monthlyLimit === 0) {
+        return;
       }
 
       const numericAmount = parseFloat(amount);
@@ -329,24 +399,39 @@ export class TransactionService {
       }
 
       if (
-        transactionLimit.isApprovedByPrimary &&
-        transactionLimit.isApprovedBySecondary
+        transactionLimit.monthlyLimit >=
+        transactionLimit.currentMonthSpent + numericAmount
       ) {
-        if (
-          transactionLimit.monthlyLimit <
-          transactionLimit.currentMonthSpent + numericAmount
-        ) {
-          throw new HttpException(
-            'Monthly spending limit exceeded',
-            HttpStatus.FORBIDDEN,
-          );
-        }
-
         transactionLimit.currentMonthSpent += numericAmount;
         await transactionLimit.save();
+      } else {
+        throw new HttpException(
+          `Monthly spending limit exceeded`,
+          HttpStatus.FORBIDDEN,
+        );
       }
     }
   }
+
+  async calculateCurrentMonthOutflow(userId: string): Promise<number> {
+    const currentMonthStart = new Date();
+    currentMonthStart.setDate(1);
+    currentMonthStart.setHours(0, 0, 0, 0);
+    const account = await this.bankAccountModel.findOne({ userId});
+  
+    const nextMonthStart = new Date(currentMonthStart);
+    nextMonthStart.setMonth(currentMonthStart.getMonth() + 1);
+  
+    const outflowTransactions = await this.transactionModel.find({
+      accountId: account.bank_account_id,
+      flow: 'OUT',
+      date: { $gte: currentMonthStart, $lt: nextMonthStart },
+    }).exec();
+  
+    return outflowTransactions.reduce((total, transaction) => total + parseFloat(transaction.amount), 0);
+  }
+  
+
   async calculateOutflows(userId: string): Promise<TransactionSummaryDto> {
     const user = await this.userModel.findById(userId);
     const account = await this.bankAccountModel.findOne({ userId: user._id });
