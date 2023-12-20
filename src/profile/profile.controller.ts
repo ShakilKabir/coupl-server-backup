@@ -41,6 +41,7 @@ export class ProfileController {
   @Get('filtered-home')
   async getFilteredHomeDetails(@Request() req): Promise<{
     userFirstName: string;
+    userLastName: string;
     partnerFirstName: string;
     balance: number;
     monthlyLimit: number;
@@ -66,5 +67,11 @@ export class ProfileController {
   ): Promise<User> {
     const userId = req.user.userId;
     return this.profileService.updateProfile(userId, updateProfileDto);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('getOffers')
+  async getOffers(): Promise<any[]> {
+    return this.profileService.getOffers();
   }
 }
