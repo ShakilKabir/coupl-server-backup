@@ -99,7 +99,7 @@ export class AlpacaController {
 
   @Get('top-movers')
   getTopMoversData() {
-    return this.alpacaService.getAlphaVantageMoversData(5);
+    return this.alpacaService.getAlphaVantageMoversData();
   }
 
   // getting single stock data (high,low,avg)
