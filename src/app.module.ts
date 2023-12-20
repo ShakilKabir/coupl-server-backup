@@ -15,6 +15,8 @@ import { BankAccountModule } from './bank-account/bank-account.module';
 import { MerchantModule } from './merchant/merchant.module';
 import { ProfileModule } from './profile/profile.module';
 import { TransactionModule } from './transaction/transaction.module';
+import { ScheduleModule } from '@nestjs/schedule';
+// import { SchedulerService } from './scheduler.service';
 
 @Module({
   imports: [
@@ -23,6 +25,7 @@ import { TransactionModule } from './transaction/transaction.module';
       isGlobal: true,
     }),
     MongooseModule.forRoot(process.env.DB_URI),
+    ScheduleModule.forRoot(),
     AuthModule,
     InvitationModule,
     AlpacaModule,

@@ -24,6 +24,11 @@ export class AlpacaController {
     return this.alpacaService.getSingleAccount(id);
   }
 
+  @Get('accountIds')
+  getTraderAccIds() {
+    return this.alpacaService.getTraderAccIds();
+  }
+
   @Post('accounts')
   createAccount(@Body() accountData: any) {
     return this.alpacaService.createClientAccount(accountData);
@@ -188,5 +193,11 @@ export class AlpacaController {
   @Get('get-past-portfolio-vals/:accountId')
   getPastPortfolioVals(@Param('accountId') accountId: string) {
     return this.alpacaService.getPastPortfolioVals(accountId);
+  }
+
+  //sanitizeportvals
+  @Get('sanitize')
+  sanitizeportvals() {
+    return this.alpacaService.sanitizeportvals();
   }
 }
