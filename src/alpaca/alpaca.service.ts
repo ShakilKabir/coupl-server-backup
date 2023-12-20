@@ -8,6 +8,7 @@ import { etfShareDetails } from 'src/utils/etfShareDetails';
 import { PortfolioValue } from './schemas/portfolioValue.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { Cron } from '@nestjs/schedule';
 
 @Injectable()
 export class AlpacaService {
@@ -574,15 +575,60 @@ export class AlpacaService {
     return pcv;
   }
 
-  async getPortfolioChartValue(traderAccId: string) {
+  async updatePortfolioChartValue(traderAccId: string) {
     let pcv: any = await this.getPastPortfolioVals(traderAccId);
     const traderAccount = await this.getTradingAccountbyId(traderAccId);
     const recentPflVal = await traderAccount['position_market_value'];
     const pastPflVals = pcv.portfolioVals.map((x) => x.value);
-    if (!pastPflVals.includes(recentPflVal)) {
-      pcv.portfolioVals.push({ date: new Date(), value: recentPflVal });
-      await this.updatePortfolioValue(traderAccId, pcv.portfolioVals);
-    }
+
+    pcv.portfolioVals.push({ date: new Date(), value: recentPflVal });
+    await this.updatePortfolioValue(traderAccId, pcv.portfolioVals);
+
+    // return pcv;
+  }
+
+  async getPortfolioChartValue(traderAccId: string) {
+    let pcv: any = await this.getPastPortfolioVals(traderAccId);
     return pcv;
+  }
+
+  async getTraderAccIds() {
+    const { data } = await this.AlpacaInstance.get(`/v1/accounts`);
+    const traderAccIds = data.map((x) => x.id);
+    return traderAccIds;
+  }
+
+  async sanitizeportvals() {
+    const traderAccIds = await this.getTraderAccIds();
+
+    // Use Promise.all to wait for all asynchronous calls to complete
+    await Promise.all(
+      traderAccIds.map(async (x) => {
+        const pcv = await this.getPastPortfolioVals(x);
+
+        const sanitizedPortfolio = new Map();
+
+        pcv.portfolioVals.forEach((entry) => {
+          const dateString = entry.date.toISOString();
+          const dateKey = dateString.split('T')[0]; // Extract the date part
+          if (!sanitizedPortfolio.has(dateKey)) {
+            sanitizedPortfolio.set(dateKey, entry);
+          }
+        });
+
+        const sanitizedArray = Array.from(sanitizedPortfolio.values());
+
+        await this.updatePortfolioValue(x, sanitizedArray);
+      }),
+    );
+  }
+
+  @Cron('0 0 * * *')
+  async handleCron() {
+    console.log('Called when the current time is 00:00');
+    const traderAccIds = await this.getTraderAccIds();
+    traderAccIds.forEach((x) => {
+      this.updatePortfolioChartValue(x);
+    });
   }
 }
