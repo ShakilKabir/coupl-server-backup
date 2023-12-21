@@ -24,6 +24,11 @@ export class AlpacaController {
     return this.alpacaService.getSingleAccount(id);
   }
 
+  @Get('accountIds')
+  getTraderAccIds() {
+    return this.alpacaService.getTraderAccIds();
+  }
+
   @Post('accounts')
   createAccount(@Body() accountData: any) {
     return this.alpacaService.createClientAccount(accountData);
@@ -94,7 +99,7 @@ export class AlpacaController {
 
   @Get('top-movers')
   getTopMoversData() {
-    return this.alpacaService.getAlphaVantageMoversData(5);
+    return this.alpacaService.getAlphaVantageMoversData();
   }
 
   // getting single stock data (high,low,avg)
@@ -111,6 +116,11 @@ export class AlpacaController {
   @Get('trading-data/:accountId')
   getTradingAccountbyId(@Param('accountId') accountId: string) {
     return this.alpacaService.getTradingAccountbyId(accountId);
+  }
+
+  @Get('trading-balance/:accountId')
+  getTradingAccountBalancebyId(@Param('accountId') accountId: string) {
+    return this.alpacaService.getTradingAccountBalancebyId(accountId);
   }
 
   @Get('trading-position/:accountId')
@@ -188,5 +198,17 @@ export class AlpacaController {
   @Get('get-past-portfolio-vals/:accountId')
   getPastPortfolioVals(@Param('accountId') accountId: string) {
     return this.alpacaService.getPastPortfolioVals(accountId);
+  }
+
+  //sanitizeportvals
+  @Get('sanitize')
+  sanitizeportvals() {
+    return this.alpacaService.sanitizeportvals();
+  }
+
+  //getSingleAssetById
+  @Get('assets/:symbol')
+  getSingleAssetById(@Param('symbol') symbol: string) {
+    return this.alpacaService.getSingleAssetById(symbol);
   }
 }

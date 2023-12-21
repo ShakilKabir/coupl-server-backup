@@ -8,12 +8,16 @@ import { etfShareDetails } from 'src/utils/etfShareDetails';
 import { PortfolioValue } from './schemas/portfolioValue.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { Cron } from '@nestjs/schedule';
+import { TopTraders } from './schemas/topTrader.schema';
 
 @Injectable()
 export class AlpacaService {
   constructor(
     @InjectModel(PortfolioValue.name)
     private readonly portfolioValueModel: Model<PortfolioValue>,
+    @InjectModel(TopTraders.name)
+    private readonly TopTradersModel: Model<TopTraders>,
   ) {}
   private readonly AlpacaInstance = getAlpacaInstance();
   private readonly alphaVantageUrl = 'https://www.alphavantage.co/query';
@@ -156,6 +160,7 @@ export class AlpacaService {
       );
       return data;
     }
+    // if
   }
 
   private toLimitOrder(orderForm: any) {
@@ -187,6 +192,13 @@ export class AlpacaService {
       `/v1/trading/accounts/${accountId}/account`,
     );
     return data;
+  }
+
+  async getTradingAccountBalancebyId(accountId: string): Promise<any> {
+    const { data } = await this.AlpacaInstance.get(
+      `/v1/trading/accounts/${accountId}/account`,
+    );
+    return data.effective_buying_power;
   }
 
   //for getting position (shares)
@@ -407,91 +419,13 @@ export class AlpacaService {
     }
   }
 
-  async getAlphaVantageMoversData(size: number): Promise<any> {
-    const { data } = await axios.get(
-      `${this.alphaVantageUrl}?function=TOP_GAINERS_LOSERS&apikey=demo`,
-    );
+  async getAlphaVantageMoversData(): Promise<any> {
+    let topTradersData: any = await this.TopTradersModel.findById(
+      '6582ae824a4a5163a1a6d103',
+    ).exec();
 
-    const topGainersWithLogo = await Promise.all(
-      data.top_gainers.map(async (item: any) => {
-        const logo = await this.getStockLogo(item.ticker);
-        return {
-          ...item,
-          logo: logo,
-        };
-      }),
-    );
-
-    const activelyTradedWithLogo = await Promise.all(
-      data.most_actively_traded.map(async (item: any) => {
-        const logo = await this.getStockLogo(item.ticker);
-        return {
-          ...item,
-          logo: logo,
-        };
-      }),
-    );
-
-    // `${this.alphaVantageUrl}?function=TOP_GAINERS_LOSERS&apikey=${process.env.ALPHA_VINTAGE_KEY}`
-    return { topGainersWithLogo, activelyTradedWithLogo };
+    return topTradersData;
   }
-
-  // private convertRawToDesired(rawData: any, size: number): any {
-  //   const gainers = (rawData.top_gainers || [])
-  //     .map((gainer: any) => ({
-  //       symbol: gainer.ticker,
-  //       percent_change: parseFloat(gainer.change_percentage.replace('%', '')),
-  //       change: parseFloat(gainer.change_amount),
-  //       price: parseFloat(gainer.price),
-  //     }))
-  //     .slice(0, size);
-
-  //   const losers = (rawData.top_losers || [])
-  //     .map((loser: any) => ({
-  //       symbol: loser.ticker,
-  //       percent_change: parseFloat(loser.change_percentage.replace('%', '')),
-  //       change: parseFloat(loser.change_amount),
-  //       price: parseFloat(loser.price),
-  //     }))
-  //     .slice(0, size);
-
-  //   return {
-  //     gainers,
-  //     losers,
-  //   };
-  // }
-
-  // async getMoversData(limit: string): Promise<any> {
-  //   const alpacaTradeInstance = getAlpacaTradeInstance();
-
-  //   const {
-  //     data: { is_open },
-  //   } = await this.AlpacaInstance.get('v1/clock');
-
-  //   if (is_open) {
-  //     const { data } = await alpacaTradeInstance.get(`/v1beta1/screener/stocks/movers?top=${limit}`);
-  //     return data;
-  //   } else {
-  //     const cachedData: any = __topMoversCache__.get('top');
-  //     let finalData = { ...cachedData };
-
-  //     if (!cachedData) {
-  //       const alphaVantageData = await this.getAlphaVantageMoversData(Number(limit) || 10);
-  //       __topMoversCache__.set('top', alphaVantageData);
-  //       finalData = alphaVantageData;
-  //     }
-
-  //     if (finalData?.top_gainers?.length) {
-  //       const desiredData = this.convertRawToDesired(finalData, Number(limit) || 10);
-  //       return desiredData;
-  //     } else {
-  //       const alphaVantageData = await this.getAlphaVantageMoversData(Number(limit) || 10);
-  //       __topMoversCache__.set('top', alphaVantageData);
-  //       const desiredData = this.convertRawToDesired(alphaVantageData, Number(limit) || 10);
-  //       return desiredData;
-  //     }
-  //   }
-  // }
 
   async getGlobalQuote(symbol: string): Promise<any> {
     try {
@@ -574,15 +508,103 @@ export class AlpacaService {
     return pcv;
   }
 
-  async getPortfolioChartValue(traderAccId: string) {
+  async updatePortfolioChartValue(traderAccId: string) {
     let pcv: any = await this.getPastPortfolioVals(traderAccId);
     const traderAccount = await this.getTradingAccountbyId(traderAccId);
     const recentPflVal = await traderAccount['position_market_value'];
     const pastPflVals = pcv.portfolioVals.map((x) => x.value);
-    if (!pastPflVals.includes(recentPflVal)) {
-      pcv.portfolioVals.push({ date: new Date(), value: recentPflVal });
-      await this.updatePortfolioValue(traderAccId, pcv.portfolioVals);
-    }
+
+    pcv.portfolioVals.push({ date: new Date(), value: recentPflVal });
+    await this.updatePortfolioValue(traderAccId, pcv.portfolioVals);
+
+    // return pcv;
+  }
+
+  async getPortfolioChartValue(traderAccId: string) {
+    let pcv: any = await this.getPastPortfolioVals(traderAccId);
     return pcv;
+  }
+
+  async getTraderAccIds() {
+    const { data } = await this.AlpacaInstance.get(`/v1/accounts`);
+    const traderAccIds = data.map((x) => x.id);
+    return traderAccIds;
+  }
+
+  async sanitizeportvals() {
+    const traderAccIds = await this.getTraderAccIds();
+
+    // Use Promise.all to wait for all asynchronous calls to complete
+    await Promise.all(
+      traderAccIds.map(async (x) => {
+        const pcv = await this.getPastPortfolioVals(x);
+
+        const sanitizedPortfolio = new Map();
+
+        pcv.portfolioVals.forEach((entry) => {
+          const dateString = entry.date.toISOString();
+          const dateKey = dateString.split('T')[0]; // Extract the date part
+          if (!sanitizedPortfolio.has(dateKey)) {
+            sanitizedPortfolio.set(dateKey, entry);
+          }
+        });
+
+        const sanitizedArray = Array.from(sanitizedPortfolio.values());
+
+        await this.updatePortfolioValue(x, sanitizedArray);
+      }),
+    );
+  }
+
+  @Cron('0 0 * * *')
+  async handleCron() {
+    console.log('Called when the current time is 00:00');
+    const traderAccIds = await this.getTraderAccIds();
+    traderAccIds.forEach((x) => {
+      this.updatePortfolioChartValue(x);
+    });
+  }
+
+  @Cron('30 03 * * *')
+  async handleTopMoversCron() {
+    console.log('Called when the current time is 03:30');
+    const { data } = await axios.get(
+      `${this.alphaVantageUrl}?function=TOP_GAINERS_LOSERS&apikey=demo`,
+    );
+
+    const topGainersWithLogo = await Promise.all(
+      data.top_gainers.map(async (item: any) => {
+        const logo = await this.getStockLogo(item.ticker);
+        return {
+          ...item,
+          logo: logo,
+        };
+      }),
+    );
+
+    const activelyTradedWithLogo = await Promise.all(
+      data.most_actively_traded.map(async (item: any) => {
+        const logo = await this.getStockLogo(item.ticker);
+        return {
+          ...item,
+          logo: logo,
+        };
+      }),
+    );
+
+    try {
+      const result = await this.TopTradersModel.findByIdAndUpdate(
+        '6582ae824a4a5163a1a6d103',
+        { topGainersWithLogo, activelyTradedWithLogo },
+      );
+      // console.log(result);
+    } catch (error) {
+      console.error('Error updating documents:', error.message);
+    }
+  }
+
+  async getSingleAssetById(symbol: string) {
+    const { data } = await this.AlpacaInstance.get(`/v1/assets/${symbol}`);
+    return data;
   }
 }

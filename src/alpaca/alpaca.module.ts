@@ -7,11 +7,13 @@ import {
   PortfolioValue,
   PortfolioValueSchema,
 } from './schemas/portfolioValue.schema';
+import { TopTraders, TopTradersSchema } from './schemas/topTrader.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: PortfolioValue.name, schema: PortfolioValueSchema },
+      { name: TopTraders.name, schema: TopTradersSchema },
     ]),
   ],
   controllers: [AlpacaController],
