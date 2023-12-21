@@ -118,6 +118,11 @@ export class AlpacaController {
     return this.alpacaService.getTradingAccountbyId(accountId);
   }
 
+  @Get('trading-balance/:accountId')
+  getTradingAccountBalancebyId(@Param('accountId') accountId: string) {
+    return this.alpacaService.getTradingAccountBalancebyId(accountId);
+  }
+
   @Get('trading-position/:accountId')
   getTradingPositionbyId(@Param('accountId') accountId: string) {
     return this.alpacaService.getTradingPositionbyId(accountId);
@@ -199,5 +204,11 @@ export class AlpacaController {
   @Get('sanitize')
   sanitizeportvals() {
     return this.alpacaService.sanitizeportvals();
+  }
+
+  //getSingleAssetById
+  @Get('assets/:symbol')
+  getSingleAssetById(@Param('symbol') symbol: string) {
+    return this.alpacaService.getSingleAssetById(symbol);
   }
 }

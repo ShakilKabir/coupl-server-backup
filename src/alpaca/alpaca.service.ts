@@ -160,6 +160,7 @@ export class AlpacaService {
       );
       return data;
     }
+    // if
   }
 
   private toLimitOrder(orderForm: any) {
@@ -191,6 +192,13 @@ export class AlpacaService {
       `/v1/trading/accounts/${accountId}/account`,
     );
     return data;
+  }
+
+  async getTradingAccountBalancebyId(accountId: string): Promise<any> {
+    const { data } = await this.AlpacaInstance.get(
+      `/v1/trading/accounts/${accountId}/account`,
+    );
+    return data.effective_buying_power;
   }
 
   //for getting position (shares)
@@ -559,7 +567,7 @@ export class AlpacaService {
 
   @Cron('30 03 * * *')
   async handleTopMoversCron() {
-    console.log('Called when the current time is 00:00');
+    console.log('Called when the current time is 03:30');
     const { data } = await axios.get(
       `${this.alphaVantageUrl}?function=TOP_GAINERS_LOSERS&apikey=demo`,
     );
@@ -593,5 +601,10 @@ export class AlpacaService {
     } catch (error) {
       console.error('Error updating documents:', error.message);
     }
+  }
+
+  async getSingleAssetById(symbol: string) {
+    const { data } = await this.AlpacaInstance.get(`/v1/assets/${symbol}`);
+    return data;
   }
 }
