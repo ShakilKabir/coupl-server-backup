@@ -117,30 +117,30 @@ export class ProfileService {
     const user = await this.getProfile(userId);
     return user;
   }
-
+   
   getOffers(): any[] {
     return [
       {
         name: 'Pizza Hut',
-        image_link: 'https://ibb.co/10qGyS6',
+        image_link: 'https://i.ibb.co/h1bv7KK/1088px-Pizza-Hut-logo-svg.png',
         offer: 'Buy 3 Get 1 Free',
         coupon_id: this.generateRandomCouponId(),
       },
       {
         name: 'Best Buy',
-        image_link: 'https://ibb.co/26D7QD9',
+        image_link: 'https://i.ibb.co/9wgvJ5P/2560px-Best-Buy-Logo-svg.png',
         offer: 'Get 3% discount',
         coupon_id: this.generateRandomCouponId(),
       },
       {
         name: 'Samsung',
-        image_link: 'https://ibb.co/kBwnKjy',
+        image_link: 'https://i.ibb.co/vj8F3ft/Samsung-logo-blue.png',
         offer: 'Get 2% discount',
         coupon_id: this.generateRandomCouponId(),
       },
       {
         name: 'Walmart',
-        image_link: 'https://ibb.co/qgFtQpD',
+        image_link: 'https://i.ibb.co/hKDs1Yb/Walmart-logo-svg.png',
         offer: 'Get 2% cashback',
         coupon_id: this.generateRandomCouponId(),
       },
